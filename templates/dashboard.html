@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>POTTAMMAL MASJID BANKING SYSTEM</title>
+
+<link href="/static/fontawesome/css/all.min.css" rel="stylesheet">
+
+<style>
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+  font-family:'Segoe UI',sans-serif;
+}
+
+body{
+  background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);
+  color:white;
+}
+
+/* NAVBAR */
+.navbar{
+  display:flex;
+  justify-content:center;
+  gap:15px;
+  padding:15px;
+  background:rgba(255,255,255,0.08);
+  backdrop-filter:blur(12px);
+  position:fixed;
+  width:100%;
+  top:0;
+  z-index:1000;
+  box-shadow:0 5px 15px rgba(0,0,0,0.3);
+}
+
+.navbar a{
+  text-decoration:none;
+  color:white;
+  padding:10px 16px;
+  border-radius:8px;
+  background:linear-gradient(135deg,#2d8ac7,#0072ff);
+  font-size:14px;
+  transition:0.3s;
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+
+.navbar a:hover{
+  background:linear-gradient(135deg,#00c6ff,#00e0ff);
+  color:black;
+  transform:translateY(-2px);
+}
+
+/* DASHBOARD */
+.dashboard{
+  width:1100px;
+  margin:100px auto 40px auto;
+  padding:35px;
+  border-radius:15px;
+  background:rgba(255,255,255,0.08);
+  backdrop-filter:blur(12px);
+  box-shadow:0 0 25px rgba(0,0,0,0.4);
+}
+
+.header{
+  text-align:center;
+  font-size:30px;
+  margin-bottom:25px;
+  font-weight:bold;
+  color:#00e0ff;
+}
+
+/* GRID - 3 BOXES PER ROW */
+.stats{
+  display:grid;
+  grid-template-columns:repeat(3, 1fr);
+  gap:20px;
+}
+
+/* LINKS */
+.stats a{
+  text-decoration:none;
+  color:white;
+  display:block;
+}
+
+/* CARD */
+.card{
+  background:rgba(255,255,255,0.10);
+  padding:22px;
+  border-radius:14px;
+  text-align:center;
+  transition:0.3s;
+  border:1px solid rgba(255,255,255,0.1);
+}
+
+/* ONLY CLICKABLE CARDS POP UP */
+.stats a .card:hover{
+  transform:translateY(-6px) scale(1.02);
+  box-shadow:0 15px 30px rgba(0,0,0,0.6);
+  cursor:pointer;
+}
+
+.card i{
+  font-size:20px;
+  margin-bottom:8px;
+  color:#00e0ff;
+}
+
+.card h3{
+  font-size:15px;
+  margin-bottom:8px;
+}
+
+.card p{
+  font-size:24px;
+  font-weight:bold;
+  color:#00e0ff;
+}
+
+/* MOBILE */
+@media(max-width:768px){
+  .stats{
+    grid-template-columns:repeat(1, 1fr);
+  }
+
+  .dashboard{
+    width:95%;
+    padding:20px;
+  }
+}
+
+/* FOOTER */
+.footer{
+  text-align:center;
+  margin-top:25px;
+  font-size:13px;
+  opacity:0.7;
+}
+.navbar .logout-btn{
+  position:absolute;
+  right:20px;
+  background:linear-gradient(135deg,#f7971e,#ffd200) !important;
+}
+.navbar .logout-btn:hover{
+  background:linear-gradient(135deg,#ffd200,#f7971e) !important;
+  color:white !important;
+}
+</style>
+</head>
+
+<body>
+
+<!-- NAVBAR -->
+<div class="navbar">
+  <a href="/create_account"><i class="fa fa-user-plus"></i> Add Member</a>
+  <a href="/deposit"><i class="fa fa-coins"></i> Deposit</a>
+  <a href="/withdraw"><i class="fa fa-money-bill"></i> Withdraw</a>
+  <a href="/new_loan"><i class="fa fa-hand-holding-dollar"></i> Add Loan</a>
+  <a href="/loan_payment"><i class="fa fa-credit-card"></i> Repay Loan</a>
+  <a href="/add_service_expense"><i class="fa fa-file-invoice-dollar"></i> Service Expense</a>
+  <a href="/report"><i class="fa fa-chart-pie"></i> Reports</a>
+  <a href="/logout" class="logout-btn"><i class="fa fa-sign-out-alt"></i> Logout</a>
+</div>
+
+<div class="dashboard">
+
+<div class="header">🏦 MSQ Banking Dashboard</div>
+
+<div class="stats">
+
+<!-- CLICKABLE -->
+<a href="/customers">
+  <div class="card">
+    <i class="fa fa-users"></i>
+    <h3>Total Members</h3>
+    <p>{{customers}}</p>
+  </div>
+</a>
+
+<!-- CLICKABLE -->
+<a href="/active_loans_report">
+  <div class="card">
+    <i class="fa fa-file-invoice"></i>
+    <h3>Active Loans</h3>
+    <p>{{loans}}</p>
+  </div>
+</a>
+<!-- CLICKABLE - PENDING DUES -->
+<a href="/pending_dues">
+  <div class="card" style="border-color:rgba(255,100,100,0.3);">
+    <i class="fa fa-bell" style="color:#ff6b6b;"></i>
+    <h3>Pending Dues</h3>
+    <p style="color:#ff6b6b;">{{pending_dues}}</p>
+  </div>
+</a>
+<!-- CLICKABLE -->
+<div class="card">
+    <i class="fa fa-wallet"></i>
+    <h3>Bank Balance</h3>
+    <p>{{balance}}</p>
+  </div>
+</a>
+
+<!-- NON CLICKABLE -->
+<div class="card">
+  <i class="fa fa-clock"></i>
+  <h3>Outstanding Loan</h3>
+  <p>{{outstanding_loan}}</p>
+</div>
+
+<div class="card">
+  <i class="fa fa-hand-holding-dollar"></i>
+  <h3>Available to Loan</h3>
+  <p>{{available_loan}}</p>
+</div>
+
+
+<div style="grid-column: 1 / -1; display: flex; justify-content: center; gap: 20px;">
+  <a href="/service_charge_due_report" style="text-decoration:none;color:white;width:calc(33.33% - 10px);">
+    <div class="card" style="border-color:rgba(255,165,0,0.4);height:100%;">
+      <i class="fa fa-exclamation-triangle" style="color:#ffa500;"></i>
+      <h3>Service Charge Due</h3>
+      <p style="color:#ffa500;">{{service_charge_due}}</p>
+    </div>
+  </a>
+  <div style="width:calc(33.33% - 10px);">
+    <div class="card" style="height:100%;">
+      <i class="fa fa-scale-balanced"></i>
+      <h3>Service Charge Balance</h3>
+      <p>{{service_balance}}</p>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<div class="footer">
+🕌 POTTAMMAL MASJID BANKING SYSTEM <br>
+Developed by Mahsooque
+</div>
+
+</div>
+
+<script>
+setTimeout(()=>{window.location.href="/logout"},300000);
+</script>
+
+</body>
+</html>

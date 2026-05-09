@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Service Charge Due Report</title>
+<link href="/static/fontawesome/css/all.min.css" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+    min-height: 100vh;
+    color: white;
+    padding: 30px 20px;
+}
+.top-nav {
+    position: fixed;
+    top: 18px;
+    right: 22px;
+    display: flex;
+    gap: 10px;
+    z-index: 1000;
+}
+.top-nav a {
+    text-decoration: none;
+    padding: 9px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    transition: 0.25s;
+    white-space: nowrap;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.35);
+}
+.btn-back {
+    background: rgba(255,255,255,0.12);
+    color: rgba(255,255,255,0.9);
+    border: 1px solid rgba(255,255,255,0.22);
+    backdrop-filter: blur(8px);
+}
+.btn-back:hover { background: rgba(255,255,255,0.22); transform: translateY(-2px); }
+.btn-dashboard {
+    background: linear-gradient(90deg, #00c6ff, #0072ff);
+    color: white;
+    border: 1px solid rgba(0,198,255,0.4);
+}
+.btn-dashboard:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,198,255,0.5); }
+
+h1 { text-align: center; font-size: 28px; margin-bottom: 25px; color: #ffa500; letter-spacing: 1px; padding-top: 10px; }
+
+.summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 15px;
+    margin-bottom: 25px;
+    max-width: 900px;
+    margin-left: auto;
+    margin-right: auto;
+}
+.card {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    backdrop-filter: blur(10px);
+}
+.card i { font-size: 24px; margin-bottom: 8px; }
+.card .val { font-size: 22px; font-weight: bold; margin: 5px 0; }
+.card .lbl { font-size: 12px; opacity: 0.75; }
+
+.search-wrap { max-width: 900px; margin: 0 auto 15px auto; position: relative; }
+.search-wrap i { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #aaa; font-size: 15px; }
+.search-wrap input {
+    width: 100%;
+    padding: 12px 14px 12px 40px;
+    border-radius: 8px;
+    border: none;
+    font-size: 14px;
+    background: rgba(255,255,255,0.95);
+    color: #222;
+    outline: none;
+}
+
+.table-wrap {
+    max-width: 900px;
+    margin: 0 auto;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.4);
+}
+table { width: 100%; border-collapse: collapse; background: rgba(255,255,255,0.06); backdrop-filter: blur(10px); }
+thead tr { background: linear-gradient(90deg, #ffa500, #e67e00); }
+th { padding: 13px 15px; text-align: left; font-size: 13px; font-weight: 600; color: white; }
+td { padding: 12px 15px; font-size: 13px; border-bottom: 1px solid rgba(255,255,255,0.07); color: rgba(255,255,255,0.9); }
+tbody tr:hover { background: rgba(255,165,0,0.08); }
+tbody tr:last-child td { border-bottom: none; }
+tfoot td {
+    padding: 13px 15px;
+    background: rgba(255,165,0,0.15);
+    font-weight: bold;
+    font-size: 13px;
+    color: #ffa500;
+    border-top: 1px solid rgba(255,255,255,0.15);
+}
+.badge-due {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: bold;
+    background: rgba(255,165,0,0.2);
+    color: #ffa500;
+    border: 1px solid #ffa500;
+}
+.no-data { text-align: center; padding: 50px; opacity: 0.6; font-size: 16px; }
+
+/* ── PAGINATION ── */
+.pagination-bar {
+    max-width: 1100px;
+    margin: 0 auto 12px auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+.pagination-info { font-size: 13px; opacity: 0.75; }
+.pagination-controls { display: flex; align-items: center; gap: 8px; }
+.page-btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 7px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.25s;
+}
+.page-btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none !important; }
+.page-btn.nav-btn {
+    background: rgba(255,255,255,0.12);
+    color: rgba(255,255,255,0.9);
+    border: 1px solid rgba(255,255,255,0.2);
+}
+.page-btn.nav-btn:not(:disabled):hover { background: rgba(255,255,255,0.22); transform: translateY(-2px); }
+.page-btn.full-btn {
+    background: linear-gradient(90deg, #00c6ff, #0072ff);
+    color: white;
+    border: 1px solid rgba(0,198,255,0.4);
+    box-shadow: 0 4px 12px rgba(0,114,255,0.3);
+}
+.page-btn.full-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,198,255,0.5); }
+.page-counter {
+    font-size: 13px;
+    font-weight: 600;
+    color: #00e0ff;
+    min-width: 80px;
+    text-align: center;
+}
+
+</style>
+</head>
+<body>
+
+<div class="top-nav">
+    <a href="/dashboard" class="btn-back">⬅ Dashboard</a>
+    <a href="/dashboard" class="btn-dashboard">🏠 Dashboard</a>
+</div>
+
+<h1><i class="fa fa-exclamation-triangle"></i> Service Charge Due Report</h1>
+
+<div class="summary" style="margin-bottom:25px;">
+    <div class="card" style="border-color:rgba(255,165,0,0.4);">
+        <i class="fa fa-users" style="color:#ffa500;"></i>
+        <div class="val" style="color:#ffa500;">{{ due_list | length }}</div>
+        <div class="lbl">Members with Due</div>
+    </div>
+    <div class="card" style="border-color:rgba(255,165,0,0.4);">
+        <i class="fa fa-rupee-sign" style="color:#ffa500;"></i>
+        <div class="val" style="color:#ffa500;">₹{{ due_list | sum(attribute='due_amount') }}</div>
+        <div class="lbl">Total Due Amount</div>
+    </div>
+</div>
+
+<div class="search-wrap">
+    <i class="fa fa-search"></i>
+    <input type="text" id="searchInput" placeholder="Search by Name / Account No / Mobile..." onkeyup="filterTable()">
+</div>
+
+
+<div class="pagination-bar" id="paginationBar" style="display:none;">
+    <div class="pagination-info" id="pageInfo">Showing rows…</div>
+    <div class="pagination-controls">
+        <button class="page-btn nav-btn" id="prevBtn" onclick="changePage('dueTable',-1)" disabled>◀ Prev</button>
+        <span class="page-counter" id="pageCounter">1 / 1</span>
+        <button class="page-btn nav-btn" id="nextBtn" onclick="changePage('dueTable',1)">Next ▶</button>
+        <button class="page-btn full-btn" id="fullReportBtn" onclick="toggleFullReport('dueTable')">📋 Full Report</button>
+    </div>
+</div>
+<div class="table-wrap">
+    {% if due_list %}
+    <table id="dueTable">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th><i class="fa fa-user"></i> Name</th>
+                <th><i class="fa fa-hashtag"></i> Account No</th>
+                <th><i class="fa fa-phone"></i> Mobile</th>
+                <th><i class="fa fa-calendar"></i> Member Since</th>
+                <th><i class="fa fa-clock"></i> Years Due</th>
+                <th><i class="fa fa-rupee-sign"></i> Due Amount</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for d in due_list %}
+            <tr>
+                <td>{{ loop.index }}</td>
+                <td>{{ d.name }}</td>
+                <td>{{ d.account_number }}</td>
+                <td>{{ d.mobile }}</td>
+                <td>{{ d.member_since }}</td>
+                <td><span class="badge-due">{{ d.years_due }} yr{{ 's' if d.years_due > 1 else '' }}</span></td>
+                <td style="color:#ffa500;font-weight:bold;">₹{{ d.due_amount }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="6">Total Due</td>
+                <td>₹{{ due_list | sum(attribute='due_amount') }}</td>
+            </tr>
+        </tfoot>
+    </table>
+    {% else %}
+    <div class="no-data">✅ No service charge dues found.</div>
+    {% endif %}
+</div>
+
+
+<div class="pagination-bar" id="paginationBarBottom" style="display:none;">
+    <div class="pagination-info" id="pageInfoBottom">Showing rows…</div>
+    <div class="pagination-controls">
+        <button class="page-btn nav-btn" id="prevBtnBottom" onclick="changePage('dueTable',-1)" disabled>◀ Prev</button>
+        <span class="page-counter" id="pageCounterBottom">1 / 1</span>
+        <button class="page-btn nav-btn" id="nextBtnBottom" onclick="changePage('dueTable',1)">Next ▶</button>
+        <button class="page-btn full-btn" id="fullReportBtnBottom" onclick="toggleFullReport('dueTable')">📋 Full Report</button>
+    </div>
+</div>
+<script>
+function filterTable() {
+    var filter = document.getElementById("searchInput").value.toLowerCase();
+    var rows = document.getElementById("dueTable").getElementsByTagName("tbody")[0].getElementsByTagName("tr");
+    for (var i = 0; i < rows.length; i++) {
+        var text = rows[i].textContent.toLowerCase();
+        rows[i].style.display = text.indexOf(filter) > -1 ? "" : "none";
+    }
+}
+</script>
+
+
+<script>
+(function(){
+    var ROWS_PER_PAGE = 25;
+    var state = {
+        tableId:     'dueTable',
+        currentPage: 1,
+        isFull:      false,
+        allRows:     [],
+        filteredRows:[]
+    };
+
+    function getRows() {
+        var tbody = document.querySelector('#' + state.tableId + ' tbody');
+        if (!tbody) return [];
+        return Array.from(tbody.querySelectorAll('tr'));
+    }
+
+    function totalPages() {
+        return Math.max(1, Math.ceil(state.filteredRows.length / ROWS_PER_PAGE));
+    }
+
+    function syncBar(suffix) {
+        var total  = state.filteredRows.length;
+        var tp     = totalPages();
+        var start  = (state.currentPage - 1) * ROWS_PER_PAGE + 1;
+        var end    = Math.min(state.currentPage * ROWS_PER_PAGE, total);
+        var infoTx = state.isFull
+            ? 'Showing all ' + total + ' rows'
+            : (total === 0 ? 'No rows' : 'Showing ' + start + '\u2013' + end + ' of ' + total + ' rows');
+        var ctrTx  = state.isFull ? '\u2014' : (state.currentPage + ' / ' + tp);
+
+        var pi = document.getElementById('pageInfo'    + suffix);
+        var pc = document.getElementById('pageCounter' + suffix);
+        var pb = document.getElementById('prevBtn'     + suffix);
+        var nb = document.getElementById('nextBtn'     + suffix);
+        if (pi) pi.textContent = infoTx;
+        if (pc) pc.textContent = ctrTx;
+        if (pb) pb.disabled = state.isFull || state.currentPage === 1;
+        if (nb) nb.disabled = state.isFull || state.currentPage >= tp;
+    }
+
+    function renderPage() {
+        var start = (state.currentPage - 1) * ROWS_PER_PAGE;
+        var end   = start + ROWS_PER_PAGE;
+        state.allRows.forEach(function(r) { r.style.display = 'none'; });
+        state.filteredRows.forEach(function(r, i) {
+            r.style.display = (state.isFull || (i >= start && i < end)) ? '' : 'none';
+        });
+        syncBar('');
+        syncBar('Bottom');
+    }
+
+    window.changePage = function(tblId, delta) {
+        if (tblId !== state.tableId) return;
+        var np = state.currentPage + delta;
+        if (np < 1 || np > totalPages()) return;
+        state.currentPage = np;
+        renderPage();
+        var tbl = document.getElementById(state.tableId);
+        if (tbl) tbl.scrollIntoView({behavior:'smooth', block:'start'});
+    };
+
+    function applyFullStyle(suffix, full) {
+        var btn = document.getElementById('fullReportBtn' + suffix);
+        if (!btn) return;
+        if (full) {
+            btn.textContent = '\uD83D\uDCC4 Paginate';
+            btn.style.background = 'linear-gradient(90deg,#f7971e,#ffd200)';
+            btn.style.color = '#111';
+        } else {
+            btn.textContent = '\uD83D\uDCCB Full Report';
+            btn.style.background = 'linear-gradient(90deg,#00c6ff,#0072ff)';
+            btn.style.color = 'white';
+        }
+    }
+
+    window.toggleFullReport = function(tblId) {
+        if (tblId !== state.tableId) return;
+        state.isFull = !state.isFull;
+        applyFullStyle('',       state.isFull);
+        applyFullStyle('Bottom', state.isFull);
+        renderPage();
+    };
+
+    /* hook existing filterTable if present */
+    var origFilter = window.filterTable;
+    window.filterTable = function() {
+        if (origFilter) origFilter();
+        /* re-build filteredRows from visible rows */
+        state.filteredRows = state.allRows.filter(function(r) {
+            return r.style.display !== 'none';
+        });
+        state.currentPage = 1;
+        state.isFull = false;
+        applyFullStyle('',       false);
+        applyFullStyle('Bottom', false);
+        renderPage();
+    };
+
+    function init() {
+        state.allRows      = getRows();
+        state.filteredRows = state.allRows.slice();
+        if (state.allRows.length > ROWS_PER_PAGE) {
+            var pb = document.getElementById('paginationBar');
+            var pbb = document.getElementById('paginationBarBottom');
+            if (pb)  pb.style.display  = 'flex';
+            if (pbb) pbb.style.display = 'flex';
+        }
+        renderPage();
+    }
+
+    if (document.readyState !== 'loading') init();
+    else document.addEventListener('DOMContentLoaded', init);
+})();
+</script>
+
+</body>
+</html>

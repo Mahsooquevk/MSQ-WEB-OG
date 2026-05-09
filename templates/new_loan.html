@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>New Loan</title>
+
+<link rel="manifest" href="/static/manifest.json">
+<meta name="theme-color" content="#00c6ff">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="PF Bank">
+<link rel="apple-touch-icon" href="/static/icons/icon-192.png">
+<link href="/static/fontawesome/css/all.min.css" rel="stylesheet">
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/static/sw.js')
+        .then(reg => console.log('SW registered'))
+        .catch(err => console.log('SW error:', err));
+    });
+  }
+  let deferredPrompt;
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    const btn = document.getElementById('installBtn');
+    if (btn) btn.style.display = 'block';
+  });
+  function installApp() {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      deferredPrompt.userChoice.then(() => { deferredPrompt = null; });
+    }
+  }
+</script>
+
+<style>
+* { margin:0; padding:0; box-sizing:border-box; font-family:Arial, Helvetica, sans-serif; }
+
+body {
+  padding-top:80px;
+  padding-bottom:40px;
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);
+  color:white;
+  padding: 60px 16px 32px;
+}
+
+.container {
+  width:450px;
+  padding:35px;
+  border-radius:15px;
+  background:rgba(255,255,255,0.1);
+  backdrop-filter:blur(12px);
+  box-shadow:0 0 25px rgba(0,0,0,0.4);
+}
+
+h2 { text-align:center; margin-bottom:25px; font-size:28px; }
+label { font-size:14px; opacity:0.9; display:block; margin-top:14px; }
+
+input, select {
+  width:100%;
+  padding:12px;
+  margin-top:6px;
+  border:none;
+  border-radius:8px;
+  outline:none;
+  font-size:14px;
+  color:#222;
+}
+
+input[readonly] {
+  background:#e8f0f7;
+  color:#1a7a45;
+  font-weight:bold;
+  letter-spacing:1px;
+}
+
+/* ── BANK INFO CARD ── */
+.info-card {
+  border-radius:12px;
+  background:rgba(255,255,255,0.07);
+  border:1px solid rgba(0,224,255,0.2);
+  margin-bottom:20px;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+}
+.info-card .stat-item { padding:12px; }
+.info-card .stat-label { font-size:10px; opacity:0.5; }
+.info-card .stat-value { font-size:16px; font-weight:bold; }
+.green { color:#00ffa3; }
+.cyan  { color:#00e0ff; }
+
+/* ── LOAN ACCOUNT PREVIEW ── */
+.loan-acc-preview {
+  background:rgba(255,255,255,0.07);
+  border:1px dashed rgba(0,255,163,0.4);
+  border-radius:8px;
+  padding:10px 14px;
+  margin-bottom:6px;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-size:13px;
+}
+.loan-acc-preview span { opacity:0.7; }
+.loan-acc-preview strong { color:#00ffa3; letter-spacing:1px; }
+
+/* ── ACCOUNT SUMMARY CARD ── */
+#infoCard {
+  border-radius: 12px;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(0,224,255,0.2);
+  overflow: hidden;
+  margin-top: 14px;
+  display: none;
+}
+#infoCard .card-header {
+  display: flex; align-items: center; gap:8px;
+  padding: 10px 16px;
+  background: rgba(0,224,255,0.08);
+  border-bottom: 1px solid rgba(0,224,255,0.15);
+  font-size: 12px; font-weight: bold;
+  letter-spacing: 0.5px; color: #00e0ff; text-transform: uppercase;
+}
+#infoCard .card-body {
+  display: grid; grid-template-columns: 1fr 1fr;
+}
+#infoCard .stat-item {
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  border-right: 1px solid rgba(255,255,255,0.06);
+}
+#infoCard .stat-item:nth-child(even) { border-right: none; }
+#infoCard .stat-item:nth-last-child(-n+2) { border-bottom: none; }
+#infoCard .stat-label { font-size:10px; opacity:0.5; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:3px; }
+#infoCard .stat-value { font-size:16px; font-weight:bold; color:#fff; }
+#infoCard .stat-value.sv-green  { color:#00ffa3; }
+#infoCard .stat-value.sv-orange { color:#ff9f43; }
+#infoCard .stat-value.sv-red    { color:#ff6b6b; }
+@keyframes statPop {
+  from { transform:scale(0.85) translateY(4px); opacity:0; }
+  to   { transform:scale(1) translateY(0); opacity:1; }
+}
+#infoCard .stat-value.animate { animation: statPop 0.3s cubic-bezier(0.34,1.56,0.64,1) forwards; }
+
+/* ── SEARCHABLE DROPDOWNS ── */
+.row { display:flex; align-items:center; gap:10px; margin-top:14px; margin-bottom:4px; }
+.col { flex:1; }
+.or  { margin-top:25px; font-weight:bold; color:#00e0ff; }
+
+.dd-wrap { position: relative; }
+.dd-input-row {
+  display: flex; align-items: center;
+  background: rgba(255,255,255,0.95);
+  border-radius: 8px; position: relative; cursor: pointer;
+  margin-top: 6px;
+}
+.dd-input-row input {
+  flex:1; border:none; outline:none;
+  padding:12px 32px 12px 12px; font-size:14px;
+  background:transparent; color:#222;
+  margin-top:0; border-radius:8px; cursor:pointer;
+}
+.dd-arrow {
+  position:absolute; right:10px; top:50%;
+  transform:translateY(-50%); color:#888;
+  font-size:10px; pointer-events:none; transition:transform 0.2s;
+}
+.dd-arrow.open { transform:translateY(-50%) rotate(180deg); }
+.dd-list {
+  display:none; position:absolute; top:calc(100% + 4px);
+  left:0; right:0; background:#fff; border-radius:10px;
+  box-shadow:0 8px 28px rgba(0,0,0,0.25); max-height:200px;
+  overflow-y:auto; z-index:999; border:1px solid rgba(0,198,255,0.3);
+}
+.dd-list.open { display:block; animation:ddIn 0.15s ease; }
+@keyframes ddIn { from{opacity:0;transform:translateY(-5px)} to{opacity:1;transform:translateY(0)} }
+.dd-item {
+  padding:10px 14px; cursor:pointer; color:#222; font-size:14px;
+  border-bottom:1px solid #f0f0f0;
+}
+.dd-item:last-child { border-bottom:none; }
+.dd-item:hover { background:#e8f7ff; }
+.dd-empty { padding:12px; text-align:center; color:#aaa; font-size:13px; }
+
+/* ── GUARANTOR SECTION ── */
+.guarantor-section {
+  margin-top: 18px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,200,80,0.25);
+  overflow: visible;
+}
+.guarantor-header {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 16px;
+  background: rgba(255,200,80,0.08);
+  border-bottom: 1px solid rgba(255,200,80,0.2);
+  border-radius: 12px 12px 0 0;
+  font-size: 12px; font-weight: bold;
+  letter-spacing: 0.5px; color: #ffd060; text-transform: uppercase;
+}
+.guarantor-body { padding: 14px 16px; }
+.guarantor-body .row { margin-top: 0; }
+
+button {
+  width:100%;
+  padding:13px;
+  border:none;
+  border-radius:10px;
+  background:linear-gradient(90deg,#00c6ff,#0072ff);
+  color:white;
+  font-size:16px;
+  font-weight:bold;
+  cursor:pointer;
+  transition:0.3s;
+  margin-top:18px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+  letter-spacing:0.5px;
+  box-shadow:0 4px 20px rgba(0,114,255,0.4);
+}
+button:hover { transform:scale(1.04); box-shadow:0 6px 24px rgba(0,198,255,0.55); }
+
+.back { text-align:center; margin-top:18px; font-size:13px; }
+.back a { color:#00e0ff; text-decoration:none; }
+.back a:hover { text-decoration:underline; opacity:0.8; }
+
+/* ── SUCCESS POPUP ── */
+#successOverlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.65);
+  z-index: 9999;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+}
+#successOverlay.show { display: flex; }
+#successPopup {
+  background: linear-gradient(145deg,#0f2027,#1a3a4a,#2c5364);
+  border: 1px solid rgba(0,224,255,0.35);
+  border-radius: 20px;
+  padding: 44px 40px 36px;
+  text-align: center;
+  color: white;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.6), 0 0 40px rgba(0,180,255,0.15);
+  max-width: 360px;
+  width: 90%;
+  animation: popIn 0.35s cubic-bezier(0.34,1.56,0.64,1);
+}
+.popup-icon-wrap {
+  width: 76px; height: 76px;
+  border-radius: 50%;
+  background: rgba(0,255,160,0.12);
+  border: 2px solid rgba(0,255,160,0.45);
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 20px;
+  font-size: 34px;
+}
+#successPopup h3 { font-size:22px; font-weight:700; margin-bottom:10px; }
+#successPopup p  { font-size:14px; opacity:0.75; margin-bottom:28px; line-height:1.65; }
+.popup-divider   { height:1px; background:rgba(255,255,255,0.12); margin-bottom:24px; }
+#successPopup .ok-btn {
+  background: linear-gradient(90deg,#00c6ff,#0072ff);
+  color: white; font-size:15px; font-weight:bold;
+  border: none; border-radius:10px;
+  padding: 13px 0; width:100%;
+  cursor: pointer; transition:0.25s;
+  box-shadow: 0 4px 20px rgba(0,114,255,0.4);
+}
+#successPopup .ok-btn:hover { transform:scale(1.04); box-shadow:0 6px 24px rgba(0,198,255,0.55); }
+
+/* ── SUCCESS POPUP ── */
+#successOverlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.65); z-index: 9999;
+  align-items: center; justify-content: center;
+  backdrop-filter: blur(4px);
+}
+#successOverlay.show { display: flex; }
+#successPopup {
+  background: linear-gradient(145deg,#0f2027,#1a3a4a,#2c5364);
+  border: 1px solid rgba(0,224,255,0.35); border-radius: 20px;
+  padding: 44px 40px 36px; text-align: center; color: white;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.6), 0 0 40px rgba(0,180,255,0.15);
+  max-width: 360px; width: 90%;
+  animation: popIn 0.35s cubic-bezier(0.34,1.56,0.64,1);
+}
+.popup-icon-wrap {
+  width: 76px; height: 76px; border-radius: 50%;
+  background: rgba(0,255,160,0.12); border: 2px solid rgba(0,255,160,0.45);
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 20px; font-size: 34px;
+}
+#successPopup h3 { font-size:22px; font-weight:700; margin-bottom:10px; }
+#successPopup p  { font-size:14px; opacity:0.75; margin-bottom:28px; line-height:1.65; }
+.popup-divider   { height:1px; background:rgba(255,255,255,0.12); margin-bottom:24px; }
+#successPopup .ok-btn {
+  background: linear-gradient(90deg,#00c6ff,#0072ff);
+  color: white; font-size:15px; font-weight:bold;
+  border: none; border-radius:10px; padding: 13px 0; width:100%;
+  cursor: pointer; transition:0.25s; box-shadow: 0 4px 20px rgba(0,114,255,0.4);
+}
+#successPopup .ok-btn:hover { transform:scale(1.04); box-shadow:0 6px 24px rgba(0,198,255,0.55); }
+
+/* ── ERROR POPUP ── */
+#errorOverlay {
+  display:none;
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.65);
+  z-index:10000;
+  align-items:center;
+  justify-content:center;
+  backdrop-filter:blur(4px);
+}
+#errorOverlay.show { display:flex; }
+#errorPopup {
+  background:linear-gradient(145deg,#0f2027,#1a3a4a,#2c5364);
+  border:1px solid rgba(231,76,60,0.4);
+  border-radius:20px;
+  padding:44px 40px 36px;
+  text-align:center;
+  color:white;
+  box-shadow:0 20px 60px rgba(0,0,0,0.6), 0 0 40px rgba(231,76,60,0.15);
+  max-width:380px;
+  width:90%;
+  animation:popIn 0.35s cubic-bezier(0.34,1.56,0.64,1);
+}
+@keyframes popIn {
+  from { transform:scale(0.7); opacity:0; }
+  to   { transform:scale(1);   opacity:1; }
+}
+.error-icon-wrap {
+  width:76px; height:76px;
+  border-radius:50%;
+  background:rgba(231,76,60,0.12);
+  border:2px solid rgba(231,76,60,0.5);
+  display:flex; align-items:center; justify-content:center;
+  margin:0 auto 20px;
+  font-size:34px;
+}
+#errorPopup h3 { font-size:22px; font-weight:700; margin-bottom:10px; color:#ff6b6b; }
+#errorPopup p  { font-size:14px; opacity:0.75; margin-bottom:28px; line-height:1.65; }
+.error-popup-divider { height:1px; background:rgba(255,255,255,0.12); margin-bottom:24px; }
+#errorPopup .ok-btn {
+  background:linear-gradient(90deg,#e74c3c,#c0392b);
+  color:white; font-size:15px; font-weight:bold;
+  border:none; border-radius:10px;
+  padding:13px 0; width:100%;
+  cursor:pointer; transition:0.25s;
+  box-shadow:0 4px 20px rgba(231,76,60,0.4);
+}
+#errorPopup .ok-btn:hover { transform:scale(1.04); box-shadow:0 6px 24px rgba(231,76,60,0.55); }
+
+/* ── NAVBAR ── */
+.navbar{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:15px;
+  padding:15px;
+  background:rgba(255,255,255,0.08);
+  backdrop-filter:blur(12px);
+  position:fixed;
+  width:100%;
+  top:0;
+  z-index:1000;
+  box-shadow:0 5px 15px rgba(0,0,0,0.3);
+}
+
+.navbar .nav-links{
+  display:flex;
+  gap:15px;
+  align-items:center;
+  flex-wrap:wrap;
+  justify-content:center;
+}
+
+.navbar a{
+  text-decoration:none;
+  color:white;
+  padding:10px 16px;
+  border-radius:8px;
+  background:linear-gradient(135deg,#2d8ac7,#0072ff);
+  font-size:14px;
+  transition:0.3s;
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+
+.navbar a:hover{
+  background:linear-gradient(135deg,#00c6ff,#00e0ff);
+  color:black;
+  transform:translateY(-2px);
+}
+
+.navbar .logout-btn{
+  position:absolute;
+  right:20px;
+  background:linear-gradient(135deg,#f7971e,#ffd200) !important;
+  color:black !important;
+}
+.navbar .logout-btn:hover{
+  background:linear-gradient(135deg,#ffd200,#f7971e) !important;
+  color:black !important;
+}
+
+/* ── MOBILE ── */
+@media(max-width:768px){
+  .container{ width:95%; }
+  .navbar .nav-links{ gap:8px; }
+  .navbar a{ padding:8px 10px; font-size:12px; }
+  .navbar .logout-btn{ position:static; }
+}
+
+</style>
+</head>
+
+<body>
+<!-- ── NAVBAR ── -->
+<div class="navbar">
+  <div class="nav-links">
+    <a href="/dashboard"><i class="fa fa-home"></i> Dashboard</a>
+    <a href="/create_account"><i class="fa fa-user-plus"></i> Add Member</a>
+    <a href="/deposit"><i class="fa fa-coins"></i> Deposit</a>
+    <a href="/withdraw"><i class="fa fa-money-bill"></i> Withdraw</a>
+    <a href="/new_loan"><i class="fa fa-hand-holding-dollar"></i> Add Loan</a>
+    <a href="/loan_payment"><i class="fa fa-credit-card"></i> Repay Loan</a>
+    <a href="/add_service_expense"><i class="fa fa-file-invoice-dollar"></i> Service Expense</a>
+    <a href="/report"><i class="fa fa-chart-pie"></i> Reports</a>
+  </div>
+  <a href="/logout" class="logout-btn"><i class="fa fa-sign-out-alt"></i> Logout</a>
+</div>
+
+
+<!-- ── DASHBOARD BUTTON ── -->
+<div id="successOverlay">
+  <div id="successPopup">
+    <div class="popup-icon-wrap">✅</div>
+    <h3>Loan Issued Successfully!</h3>
+    <p>The loan has been recorded successfully.</p>
+    <div class="popup-divider"></div>
+    <button class="ok-btn" onclick="closeSuccessPopup()">OK - View Report</button>
+  </div>
+</div>
+<div class="container">
+
+  <h2><i class="fa fa-file-invoice-dollar" style="color:#00e0ff;"></i> New Loan</h2>
+
+  <!-- BANK INFO CARD (unchanged) -->
+  <div class="info-card">
+    <div class="stat-item">
+      <div class="stat-label">Bank Balance</div>
+      <div class="stat-value green">₹{{ balance }}</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-label">Available for Loan</div>
+      <div class="stat-value cyan">₹{{ available_loan }}</div>
+    </div>
+  </div>
+
+  <!-- LOAN ACCOUNT PREVIEW (unchanged) -->
+  <div class="loan-acc-preview">
+    <span>🔖 Loan Account No. will be:</span>
+    <strong>{{ next_loan_acc }}</strong>
+  </div>
+
+  <!-- FORM -->
+  <form method="POST" action="/new_loan" id="loanForm">
+
+    <!-- Hidden loan account number for Flask POST -->
+    <input type="hidden" name="loan_account_number" value="{{ next_loan_acc }}">
+
+    <!-- SEARCHABLE CUSTOMER + ACCOUNT DROPDOWNS -->
+    <div class="row">
+      <div class="col">
+        <label>Customer</label>
+        <div class="dd-wrap">
+          <div class="dd-input-row" id="nameRow">
+            <input type="text" id="nameSearch" placeholder="Search name..." readonly>
+            <span class="dd-arrow" id="nameArrow">▼</span>
+          </div>
+          <div class="dd-list" id="nameList"></div>
+        </div>
+      </div>
+
+      <div class="or">OR</div>
+
+      <div class="col">
+        <label>Account</label>
+        <div class="dd-wrap">
+          <div class="dd-input-row" id="accRow">
+            <input type="text" id="accSearch" placeholder="Search acc no..." readonly>
+            <span class="dd-arrow" id="accArrow">▼</span>
+          </div>
+          <div class="dd-list" id="accList"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hidden select keeps name="customer" for Flask POST (unchanged) -->
+    <select id="customerSelect" name="customer" required style="display:none;">
+      <option value="">-- Select Customer --</option>
+      {% for c in customers %}
+        <option value="{{ c.id }}" data-acc="{{ c.account_number }}" data-mobile="{{ c.mobile }}">{{ c.name }}</option>
+      {% endfor %}
+    </select>
+
+    <!-- ACCOUNT SUMMARY CARD (shown after customer picked) -->
+    <div id="infoCard">
+      <div class="card-header">📊 Account Summary</div>
+      <div class="card-body">
+        <div class="stat-item">
+          <div class="stat-label">💰 Balance</div>
+          <div class="stat-value sv-green" id="custBalance">₹0</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">🏦 Loan</div>
+          <div class="stat-value" id="custLoanAmt">₹0</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">✅ Paid</div>
+          <div class="stat-value sv-orange" id="custLoanPaid">₹0</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">⚠ Remaining</div>
+          <div class="stat-value sv-red" id="custLoanRem">₹0</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- GUARANTOR 1 -->
+    <div class="guarantor-section">
+      <div class="guarantor-header">🤝 Loan Guarantor - 1</div>
+      <div class="guarantor-body">
+        <div class="row">
+          <div class="col">
+            <label style="margin-top:0;">Customer</label>
+            <div class="dd-wrap">
+              <div class="dd-input-row" id="g1nameRow">
+                <input type="text" id="g1nameSearch" placeholder="Search name..." readonly>
+                <span class="dd-arrow" id="g1nameArrow">▼</span>
+              </div>
+              <div class="dd-list" id="g1nameList"></div>
+            </div>
+          </div>
+          <div class="or">OR</div>
+          <div class="col">
+            <label style="margin-top:0;">Account</label>
+            <div class="dd-wrap">
+              <div class="dd-input-row" id="g1accRow">
+                <input type="text" id="g1accSearch" placeholder="Search acc no..." readonly>
+                <span class="dd-arrow" id="g1accArrow">▼</span>
+              </div>
+              <div class="dd-list" id="g1accList"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <input type="hidden" name="guarantor1" id="guarantor1Select">
+
+    <!-- GUARANTOR 2 -->
+    <div class="guarantor-section" style="border-color:rgba(160,130,255,0.25);">
+      <div class="guarantor-header" style="background:rgba(160,130,255,0.08);border-color:rgba(160,130,255,0.2);color:#c9b8ff;">🤝 Loan Guarantor - 2</div>
+      <div class="guarantor-body">
+        <div class="row">
+          <div class="col">
+            <label style="margin-top:0;">Customer</label>
+            <div class="dd-wrap">
+              <div class="dd-input-row" id="g2nameRow">
+                <input type="text" id="g2nameSearch" placeholder="Search name..." readonly>
+                <span class="dd-arrow" id="g2nameArrow">▼</span>
+              </div>
+              <div class="dd-list" id="g2nameList"></div>
+            </div>
+          </div>
+          <div class="or">OR</div>
+          <div class="col">
+            <label style="margin-top:0;">Account</label>
+            <div class="dd-wrap">
+              <div class="dd-input-row" id="g2accRow">
+                <input type="text" id="g2accSearch" placeholder="Search acc no..." readonly>
+                <span class="dd-arrow" id="g2accArrow">▼</span>
+              </div>
+              <div class="dd-list" id="g2accList"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <input type="hidden" name="guarantor2" id="guarantor2Select">
+
+    <label>Loan Amount</label>
+    <input type="number" name="amount" placeholder="Enter amount" max="{{ available_loan }}" required autocomplete="off">
+
+    <label>Tenure (Months)</label>
+    <input type="number" name="tenure" placeholder="Enter months" required autocomplete="off">
+
+    <button type="submit"><i class="fa fa-hand-holding-dollar"></i> Give Loan</button>
+
+  </form>
+
+</div>
+
+<!-- ── SUCCESS POPUP ── -->
+<div id="successOverlay">
+  <div id="successPopup">
+    <div class="popup-icon-wrap">✅</div>
+    <h3>Loan Issued Successfully!</h3>
+    <p>The loan has been recorded successfully.</p>
+    <div class="popup-divider"></div>
+    <button class="ok-btn" onclick="closeSuccessPopup()">OK - View Report</button>
+  </div>
+</div>
+
+<!-- OPEN LOAN POPUP (unchanged) -->
+<div id="loanOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:9999;align-items:center;justify-content:center;backdrop-filter:blur(4px);">
+  <div style="background:linear-gradient(145deg,#0f2027,#1a3a4a,#2c5364);border:1px solid rgba(255,100,100,0.4);border-radius:20px;padding:40px;text-align:center;color:white;width:90%;max-width:360px;">
+    <div style="width:70px;height:70px;border-radius:50%;background:rgba(255,80,80,0.1);border:2px solid #ff6b6b;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-size:30px;">⚠️</div>
+    <h3 style="margin-bottom:10px;">Loan Already Active!</h3>
+    <p style="opacity:0.8;margin-bottom:25px;">This member already has an open loan.<br>Please close the existing loan before issuing a new one.</p>
+    <button onclick="document.getElementById('loanOverlay').style.display='none'" style="background:linear-gradient(90deg,#ff4444,#cc0000);color:white;border:none;border-radius:10px;padding:12px;width:100%;cursor:pointer;font-weight:bold;font-size:15px;">OK</button>
+  </div>
+</div>
+
+<!-- ERROR POPUP -->
+<div id="errorOverlay">
+  <div id="errorPopup">
+    <div class="error-icon-wrap">⚠️</div>
+    <h3>Cannot Issue Loan</h3>
+    <p id="errorMsg">An error occurred.</p>
+    <div class="error-popup-divider"></div>
+    <button class="ok-btn" onclick="document.getElementById('errorOverlay').classList.remove('show')">OK</button>
+  </div>
+</div>
+
+<script>
+const openLoanIds = {{ open_loan_customer_ids | tojson }};
+
+const customers = [
+  {% for c in customers %}
+  { id: "{{ c.id }}", name: "{{ c.name }}", acc: "{{ c.account_number }}", mobile: "{{ c.mobile }}" },
+  {% endfor %}
+];
+
+/* ── Load customer summary card (main borrower only) ── */
+function loadCustomerData(id) {
+  if (!id) return;
+  fetch("/get_customer_data/" + id)
+  .then(res => res.json())
+  .then(data => {
+    // Check negative balance
+    if (data.balance < 0) {
+      document.getElementById("errorMsg").textContent =
+        "Customer account balance is negative (₹" + data.balance + "). Cannot issue loan.";
+      document.getElementById("errorOverlay").classList.add("show");
+      nameDd.setCur(null); accDd.setCur(null);
+      _selected = null;
+      document.getElementById("customerSelect").value = "";
+      return;
+    }
+    // Check pending service charge
+    if (data.pending_service_charge > 0) {
+      document.getElementById("errorMsg").textContent =
+        "Pending service charge of ₹" + data.pending_service_charge + " is due. Please clear dues before issuing loan.";
+      document.getElementById("errorOverlay").classList.add("show");
+      nameDd.setCur(null); accDd.setCur(null);
+      _selected = null;
+      document.getElementById("customerSelect").value = "";
+      return;
+    }
+
+    const card = document.getElementById("infoCard");
+    card.style.display = "block";
+    function set(elId, val, cls) {
+      const el = document.getElementById(elId);
+      el.className = "stat-value " + cls + " animate";
+      el.textContent = "₹" + val;
+      void el.offsetWidth;
+      el.className = "stat-value " + cls + " animate";
+    }
+    set("custBalance",  data.balance,          "sv-green");
+    set("custLoanAmt",  data.loan.loan_amount,  "");
+    set("custLoanPaid", data.loan.paid,         "sv-orange");
+    set("custLoanRem",  data.loan.remaining,    "sv-red");
+  });
+}
+
+/* ── Generic reusable dropdown builder ── */
+function makeDd(rowId, searchId, arrowId, listId, filterFn, labelFn, onPick) {
+  const row    = document.getElementById(rowId);
+  const search = document.getElementById(searchId);
+  const arrow  = document.getElementById(arrowId);
+  const list   = document.getElementById(listId);
+  let open = false;
+  let _cur = null;
+
+  function render(q) {
+    q = (q || "").toLowerCase().trim();
+    const matches = customers.filter(c => filterFn(c, q));
+    list.innerHTML = "";
+    if (!matches.length) { list.innerHTML = '<div class="dd-empty">No results found</div>'; return; }
+    matches.forEach(c => {
+      const d = document.createElement("div");
+      d.className = "dd-item";
+      d.textContent = labelFn(c);
+      d.addEventListener("mousedown", e => { e.preventDefault(); pick(c); });
+      list.appendChild(d);
+    });
+  }
+
+  function openDd() {
+    search.readOnly = false; search.value = "";
+    render("");
+    list.classList.add("open"); arrow.classList.add("open");
+    open = true; search.focus();
+  }
+
+  function closeDd(c) {
+    list.classList.remove("open"); arrow.classList.remove("open");
+    open = false; search.readOnly = true;
+    search.value = c ? labelFn(c) : "";
+    if (!c) search.placeholder = search.dataset.ph;
+    _cur = c || null;
+  }
+
+  function pick(c) {
+    closeDd(c);
+    onPick(c);
+  }
+
+  row.addEventListener("click", () => open ? closeDd(_cur) : openDd());
+  search.addEventListener("input", () => render(search.value));
+  search.addEventListener("blur", () => setTimeout(() => closeDd(_cur), 150));
+  document.addEventListener("click", e => { if (!row.contains(e.target) && !list.contains(e.target)) closeDd(_cur); });
+
+  return { closeDd, setCur: (c) => closeDd(c) };
+}
+
+/* ══ MAIN BORROWER dropdowns ══ */
+let _selected = null;
+
+const nameDd = makeDd("nameRow","nameSearch","nameArrow","nameList",
+  (c,q) => !q || c.name.toLowerCase().includes(q),
+  c => c.name,
+  (c) => {
+    if (openLoanIds.includes(c.id)) {
+      document.getElementById("loanOverlay").style.display = "flex";
+      nameDd.setCur(null); accDd.setCur(null);
+      _selected = null; return;
+    }
+    _selected = c;
+    accDd.setCur(c);
+    document.getElementById("customerSelect").value = c.id;
+    loadCustomerData(c.id);
+  }
+);
+document.getElementById("nameSearch").dataset.ph = "Search name...";
+
+const accDd = makeDd("accRow","accSearch","accArrow","accList",
+  (c,q) => !q || c.acc.includes(q),
+  c => c.acc,
+  (c) => {
+    if (openLoanIds.includes(c.id)) {
+      document.getElementById("loanOverlay").style.display = "flex";
+      nameDd.setCur(null); accDd.setCur(null);
+      _selected = null; return;
+    }
+    _selected = c;
+    nameDd.setCur(c);
+    document.getElementById("customerSelect").value = c.id;
+    loadCustomerData(c.id);
+  }
+);
+document.getElementById("accSearch").dataset.ph = "Search acc no...";
+
+/* ══ GUARANTOR 1 dropdowns ══ */
+const g1nameDd = makeDd("g1nameRow","g1nameSearch","g1nameArrow","g1nameList",
+  (c,q) => !q || c.name.toLowerCase().includes(q),
+  c => c.name,
+  (c) => {
+    g1accDd.setCur(c);
+    document.getElementById("guarantor1Select").value = c.id;
+  }
+);
+document.getElementById("g1nameSearch").dataset.ph = "Search name...";
+
+const g1accDd = makeDd("g1accRow","g1accSearch","g1accArrow","g1accList",
+  (c,q) => !q || c.acc.includes(q),
+  c => c.acc,
+  (c) => {
+    g1nameDd.setCur(c);
+    document.getElementById("guarantor1Select").value = c.id;
+  }
+);
+document.getElementById("g1accSearch").dataset.ph = "Search acc no...";
+
+/* ══ GUARANTOR 2 dropdowns ══ */
+const g2nameDd = makeDd("g2nameRow","g2nameSearch","g2nameArrow","g2nameList",
+  (c,q) => !q || c.name.toLowerCase().includes(q),
+  c => c.name,
+  (c) => {
+    g2accDd.setCur(c);
+    document.getElementById("guarantor2Select").value = c.id;
+  }
+);
+document.getElementById("g2nameSearch").dataset.ph = "Search name...";
+
+const g2accDd = makeDd("g2accRow","g2accSearch","g2accArrow","g2accList",
+  (c,q) => !q || c.acc.includes(q),
+  c => c.acc,
+  (c) => {
+    g2nameDd.setCur(c);
+    document.getElementById("guarantor2Select").value = c.id;
+  }
+);
+document.getElementById("g2accSearch").dataset.ph = "Search acc no...";
+
+/* ── Form submit validation: guarantors mandatory ── */
+document.getElementById("loanForm").addEventListener("submit", function(e) {
+  if (!document.getElementById("guarantor1Select").value) {
+    e.preventDefault();
+    alert("⚠️ Please select Loan Guarantor - 1 before proceeding.");
+    return;
+  }
+  if (!document.getElementById("guarantor2Select").value) {
+    e.preventDefault();
+    alert("⚠️ Please select Loan Guarantor - 2 before proceeding.");
+    return;
+  }
+});
+
+/* ── SUCCESS POPUP ── */
+function closeSuccessPopup() {
+  window.location.href = "/loan_report";
+}
+
+if (window.location.search.includes("success=1")) {
+  document.getElementById("successOverlay").classList.add("show");
+}
+
+/* ── URL error param handler ── */
+window.addEventListener('DOMContentLoaded', function() {
+  const params = new URLSearchParams(window.location.search);
+  const err = params.get('error');
+  if (err) {
+    document.getElementById('errorMsg').textContent = decodeURIComponent(err);
+    document.getElementById('errorOverlay').classList.add('show');
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
+});
+function closeSuccessPopup() { window.location.href = "/loan_transactions_report"; }
+if (window.location.search.includes("success=1")) { document.getElementById("successOverlay").classList.add("show"); }
+
+</script>
+
+</body>
+</html>

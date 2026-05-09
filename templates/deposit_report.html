@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Transaction Report</title>
+<link href="/static/fontawesome/css/all.min.css" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+    min-height: 100vh;
+    color: white;
+    padding: 30px 20px;
+}
+h1 { text-align: center; font-size: 28px; margin-bottom: 25px; color: #00e0ff; letter-spacing: 1px; }
+.summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 15px;
+    margin-bottom: 25px;
+    max-width: 1100px;
+    margin-left: auto;
+    margin-right: auto;
+}
+.card {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    backdrop-filter: blur(10px);
+    transition: 0.3s;
+}
+.card:hover { transform: translateY(-4px); box-shadow: 0 10px 25px rgba(0,0,0,0.4); }
+.card i { font-size: 24px; color: #00e0ff; margin-bottom: 8px; }
+.card .val { font-size: 22px; font-weight: bold; color: #00e0ff; margin: 5px 0; }
+.card .val.green { color: #2ecc71; }
+.card .val.red   { color: #e74c3c; }
+.card .lbl { font-size: 12px; opacity: 0.75; }
+.search-wrap { max-width: 1100px; margin: 0 auto 15px auto; position: relative; }
+.search-wrap i { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #aaa; font-size: 15px; }
+.search-wrap input {
+    width: 100%;
+    padding: 12px 14px 12px 40px;
+    border-radius: 8px;
+    border: none;
+    font-size: 14px;
+    background: rgba(255,255,255,0.95);
+    color: #222;
+    outline: none;
+}
+.table-wrap {
+    max-width: 1100px;
+    margin: 0 auto;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.4);
+}
+table { width: 100%; border-collapse: collapse; background: rgba(255,255,255,0.06); backdrop-filter: blur(10px); }
+thead tr { background: linear-gradient(90deg, #00c6ff, #0072ff); }
+th { padding: 13px 15px; text-align: left; font-size: 13px; font-weight: 600; color: white; letter-spacing: 0.5px; }
+td { padding: 12px 15px; font-size: 13px; border-bottom: 1px solid rgba(255,255,255,0.07); color: rgba(255,255,255,0.9); }
+tbody tr:hover { background: rgba(0,198,255,0.08); }
+tbody tr:last-child td { border-bottom: none; }
+.badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+}
+.badge.deposit    { background: rgba(46,204,113,0.2); color: #2ecc71; border: 1px solid #2ecc71; }
+.badge.withdrawal { background: rgba(231,76,60,0.2);  color: #e74c3c; border: 1px solid #e74c3c; }
+.badge.service    { background: rgba(155,89,182,0.2); color: #c39bd3; border: 1px solid #c39bd3; }
+.amount-green { color: #2ecc71; font-weight: bold; }
+.amount-red   { color: #e74c3c; font-weight: bold; }
+.amount-purple { color: #c39bd3; font-weight: bold; }
+tfoot td {
+    padding: 13px 15px;
+    background: rgba(0,114,255,0.2);
+    font-weight: bold;
+    font-size: 13px;
+    color: #00e0ff;
+    border-top: 1px solid rgba(255,255,255,0.15);
+}
+.no-data { text-align: center; padding: 50px; opacity: 0.6; font-size: 16px; }
+.nav { display: none; }
+
+/* DELETE BUTTON */
+.btn-delete {
+    background: rgba(231,76,60,0.15);
+    border: 1px solid rgba(231,76,60,0.5);
+    color: #e74c3c;
+    padding: 5px 11px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    transition: 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+.btn-delete:hover {
+    background: rgba(231,76,60,0.35);
+    border-color: #e74c3c;
+    transform: scale(1.05);
+}
+
+/* TOP NAV */
+.top-nav {
+    position: fixed;
+    top: 18px;
+    right: 22px;
+    display: flex;
+    gap: 10px;
+    z-index: 1000;
+}
+.top-nav a {
+    text-decoration: none;
+    padding: 9px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    transition: 0.25s;
+    white-space: nowrap;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.35);
+}
+.top-nav .btn-report {
+    background: rgba(255,255,255,0.12);
+    color: rgba(255,255,255,0.9);
+    border: 1px solid rgba(255,255,255,0.22);
+    backdrop-filter: blur(8px);
+}
+.top-nav .btn-report:hover { background: rgba(255,255,255,0.22); transform: translateY(-2px); }
+.top-nav .btn-dashboard {
+    background: linear-gradient(90deg, #00c6ff, #0072ff);
+    color: white;
+    border: 1px solid rgba(0,198,255,0.4);
+}
+.top-nav .btn-dashboard:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,198,255,0.5); }
+
+/* DELETE CONFIRM MODAL */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(5px);
+}
+.modal-overlay.show { display: flex; }
+.modal-box {
+    background: linear-gradient(145deg, #0f2027, #1a3a4a, #2c5364);
+    border: 1px solid rgba(231,76,60,0.4);
+    border-radius: 20px;
+    padding: 40px 36px 32px;
+    text-align: center;
+    color: white;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6), 0 0 40px rgba(231,76,60,0.1);
+    max-width: 380px;
+    width: 90%;
+    animation: popIn 0.3s cubic-bezier(0.34,1.56,0.64,1);
+}
+@keyframes popIn {
+    from { transform: scale(0.75); opacity: 0; }
+    to   { transform: scale(1);   opacity: 1; }
+}
+.modal-icon {
+    width: 70px; height: 70px;
+    border-radius: 50%;
+    background: rgba(231,76,60,0.12);
+    border: 2px solid rgba(231,76,60,0.4);
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 18px;
+    font-size: 28px;
+}
+.modal-box h3 { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+.modal-box p  { font-size: 13px; opacity: 0.7; margin-bottom: 20px; line-height: 1.6; }
+.modal-info {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 10px;
+    padding: 12px 16px;
+    text-align: left;
+    font-size: 12px;
+    margin-bottom: 20px;
+}
+.modal-info span { display: block; opacity: 0.6; margin-bottom: 3px; font-size: 11px; }
+.modal-info strong { color: #00e0ff; font-size: 13px; }
+.pwd-wrap { position: relative; margin-bottom: 20px; }
+.pwd-wrap input {
+    width: 100%;
+    padding: 11px 40px 11px 14px;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.2);
+    background: rgba(255,255,255,0.08);
+    color: white;
+    font-size: 14px;
+    outline: none;
+    transition: 0.2s;
+}
+.pwd-wrap input:focus { border-color: #e74c3c; background: rgba(255,255,255,0.12); }
+.pwd-wrap input::placeholder { opacity: 0.4; }
+.pwd-toggle {
+    position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+    cursor: pointer; opacity: 0.5; font-size: 14px;
+}
+.pwd-toggle:hover { opacity: 0.9; }
+.pwd-error {
+    color: #e74c3c; font-size: 12px; margin-top: -14px; margin-bottom: 14px;
+    text-align: left; display: none;
+}
+.divider { height: 1px; background: rgba(255,255,255,0.1); margin-bottom: 20px; }
+.modal-btns { display: flex; gap: 10px; }
+.btn-cancel {
+    flex: 1;
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.2);
+    background: rgba(255,255,255,0.07);
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s;
+}
+.btn-cancel:hover { background: rgba(255,255,255,0.14); }
+.btn-confirm-del {
+    flex: 1;
+    padding: 12px;
+    border-radius: 10px;
+    border: none;
+    background: linear-gradient(90deg, #c0392b, #e74c3c);
+    color: white;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: 0.2s;
+    box-shadow: 0 4px 15px rgba(231,76,60,0.35);
+}
+.btn-confirm-del:hover { transform: scale(1.03); box-shadow: 0 6px 20px rgba(231,76,60,0.55); }
+.btn-confirm-del:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+/* SUCCESS TOAST */
+.toast {
+    position: fixed;
+    bottom: 30px; left: 50%; transform: translateX(-50%) translateY(80px);
+    background: rgba(46,204,113,0.95);
+    color: white; font-size: 14px; font-weight: 600;
+    padding: 12px 24px; border-radius: 30px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.4);
+    z-index: 99999; transition: transform 0.4s ease;
+    white-space: nowrap;
+}
+.toast.show { transform: translateX(-50%) translateY(0); }
+
+@media(max-width: 768px) {
+    .summary { grid-template-columns: repeat(2, 1fr); }
+    th, td { padding: 10px 8px; font-size: 12px; }
+}
+
+/* ── PAGINATION ── */
+.pagination-bar {
+    max-width: 1100px;
+    margin: 0 auto 12px auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+.pagination-info { font-size: 13px; opacity: 0.75; }
+.pagination-controls { display: flex; align-items: center; gap: 8px; }
+.page-btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 7px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.25s;
+}
+.page-btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none !important; }
+.page-btn.nav-btn {
+    background: rgba(255,255,255,0.12);
+    color: rgba(255,255,255,0.9);
+    border: 1px solid rgba(255,255,255,0.2);
+}
+.page-btn.nav-btn:not(:disabled):hover { background: rgba(255,255,255,0.22); transform: translateY(-2px); }
+.page-btn.full-btn {
+    background: linear-gradient(90deg, #00c6ff, #0072ff);
+    color: white;
+    border: 1px solid rgba(0,198,255,0.4);
+    box-shadow: 0 4px 12px rgba(0,114,255,0.3);
+}
+.page-btn.full-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,198,255,0.5); }
+.page-counter {
+    font-size: 13px;
+    font-weight: 600;
+    color: #00e0ff;
+    min-width: 80px;
+    text-align: center;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="top-nav">
+    <a href="/report" class="btn-report">⬅ Reports</a>
+    <a href="/dashboard" class="btn-dashboard">🏠 Dashboard</a>
+</div>
+
+<!-- DELETE CONFIRM MODAL -->
+<div class="modal-overlay" id="deleteModal">
+    <div class="modal-box">
+        <div class="modal-icon">🗑️</div>
+        <h3>Delete Transaction?</h3>
+        <p>This action is permanent and cannot be undone. The entry will be removed from the database.</p>
+        <div class="modal-info">
+            <span>Transaction details</span>
+            <strong id="modalTxnInfo">—</strong>
+        </div>
+        <div class="pwd-wrap">
+            <input type="password" id="adminPwd" placeholder="Enter admin password" autocomplete="off">
+            <span class="pwd-toggle" onclick="togglePwd()"><i class="fa fa-eye" id="eyeIcon"></i></span>
+        </div>
+        <div class="pwd-error" id="pwdError">⚠ Incorrect password. Please try again.</div>
+        <div class="divider"></div>
+        <div class="modal-btns">
+            <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+            <button class="btn-confirm-del" id="confirmDelBtn" onclick="confirmDelete()">
+                <i class="fa fa-trash"></i> Delete
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast">✅ Transaction deleted successfully!</div>
+
+<!-- DELETE SUCCESS MODAL -->
+<div class="modal-overlay" id="deleteSuccessModal">
+    <div class="modal-box" style="text-align:center;">
+        <div class="modal-icon" style="background:rgba(46,204,113,0.12);border-color:rgba(46,204,113,0.4);">✅</div>
+        <h3>Deleted Successfully!</h3>
+        <p>The entry has been removed from the database.</p>
+        <div class="divider"></div>
+        <div class="modal-btns">
+            <button class="btn-confirm-del" style="background:linear-gradient(90deg,#00c6ff,#0072ff);box-shadow:0 4px 15px rgba(0,114,255,0.4);"
+                onclick="document.getElementById('deleteSuccessModal').classList.remove('show'); window.history.replaceState({}, document.title, window.location.pathname);">
+                <i class="fa fa-check"></i> OK
+            </button>
+        </div>
+    </div>
+</div>
+
+<h1><i class="fa fa-exchange-alt"></i> Transaction Report</h1>
+
+{% if request.args.get('deleted') == '1' %}
+<script>
+  window.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('deleteSuccessModal').classList.add('show');
+  });
+</script>
+{% endif %}
+
+<div class="summary">
+    <div class="card">
+        <i class="fa fa-coins"></i>
+        <div class="val green">₹{{ total_deposits }}</div>
+        <div class="lbl">Total Deposited</div>
+    </div>
+    <div class="card">
+        <i class="fa fa-money-bill-wave"></i>
+        <div class="val red">₹{{ total_withdrawals }}</div>
+        <div class="lbl">Total Withdrawn</div>
+    </div>
+    <div class="card">
+        <i class="fa fa-cog"></i>
+        <div class="val" style="color:#c39bd3;">₹{{ total_service_charges }}</div>
+        <div class="lbl">Total Service Charge</div>
+    </div>
+    <div class="card">
+        <i class="fa fa-landmark"></i>
+        <div class="val">₹{{ bank_balance }}</div>
+        <div class="lbl">Balance In Deposit (Loan Details Excluded) </div>
+    </div>
+</div>
+
+</div>
+
+{% if negative_customers %}
+<div style="max-width:1100px;margin:0 auto 20px auto;">
+    <div style="background:rgba(231,76,60,0.12);border:1px solid rgba(231,76,60,0.4);
+                border-radius:12px;padding:16px 20px;">
+        <div style="font-size:14px;font-weight:700;color:#e74c3c;margin-bottom:12px;">
+            ⚠ Customers with Negative Balance
+        </div>
+        {% for c in negative_customers %}
+        <div style="display:flex;justify-content:space-between;align-items:center;
+                    padding:8px 12px;margin-bottom:6px;border-radius:8px;
+                    background:rgba(231,76,60,0.08);border:1px solid rgba(231,76,60,0.2);">
+            <span style="font-size:13px;">
+                <span style="opacity:0.6;">{{ c.account_number }}</span>
+                &nbsp;·&nbsp; {{ c.name }}
+            </span>
+            <span style="color:#e74c3c;font-weight:700;font-size:14px;">
+                ₹{{ c.balance | round(2) }}
+            </span>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<div class="search-wrap">
+    <i class="fa fa-search"></i>
+    <input type="text" id="searchInput" placeholder="Search by account, name, mobile or type…" oninput="filterTable()">
+</div>
+
+<div class="pagination-bar" id="paginationBar" style="display:none;">
+    <div class="pagination-info" id="pageInfo">Showing rows…</div>
+    <div class="pagination-controls">
+        <button class="page-btn nav-btn" id="prevBtn" onclick="changePage('txnTable',-1)" disabled>◀ Prev</button>
+        <span class="page-counter" id="pageCounter">1 / 1</span>
+        <button class="page-btn nav-btn" id="nextBtn" onclick="changePage('txnTable',1)">Next ▶</button>
+        <button class="page-btn full-btn" id="fullReportBtn" onclick="toggleFullReport('txnTable')">📋 Full Report</button>
+    </div>
+</div>
+<div class="table-wrap">
+    {% if transactions %}
+    <table id="txnTable">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th><i class="fa fa-hashtag"></i> Acc No</th>
+                <th><i class="fa fa-user"></i> Customer Name</th>
+                <th><i class="fa fa-phone"></i> Mobile</th>
+                <th><i class="fa fa-tag"></i> Type</th>
+                <th><i class="fa fa-coins"></i> Amount</th>
+                <th><i class="fa fa-calendar"></i> Date & Time</th>
+                <th><i class="fa fa-tag"></i> Remark</th>
+                <th><i class="fa fa-cog"></i> Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% set total = transactions | length %}
+            {% set latest_id = transactions | map(attribute='id') | max %}
+            {% for t in transactions %}
+            <tr id="row-{{ t.id }}">
+                <td>{{ loop.index }}</td>
+                <td>{{ t.account_number }}</td>
+                <td>{{ t.name }}</td>
+                <td>{{ t.mobile }}</td>
+                <td>
+                    {% if t.type|lower == 'deposit' %}
+                    <span class="badge deposit">💰 Deposit</span>
+                    {% elif t.type|lower == 'service_charge' %}
+                    <span class="badge service">🏷️ Service Charge</span>
+                    {% else %}
+                    <span class="badge withdrawal">💸 Withdrawal</span>
+                    {% endif %}
+                </td>
+                <td class="{{ 'amount-green' if t.type|lower == 'deposit' else ('amount-purple' if t.type|lower == 'service_charge' else 'amount-red') }}">
+                    ₹{{ t.amount }}
+                </td>
+                <td>{{ t.date[:16] if t.date else '-' }}</td>
+                <td style="font-size:12px; opacity:0.8;">{{ t.remark or '—' }}</td>
+                <td>
+                    {% if t.id == latest_id %}
+                    <button class="btn-delete"
+                        onclick="openDeleteModal({{ t.id }}, '{{ t.account_number }}', '{{ t.name }}', '₹{{ t.amount }}')">
+                        <i class="fa fa-trash"></i> Delete
+                    </button>
+                    {% else %}
+                    <span style="opacity:0.2;font-size:12px;">—</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="5">Total Transactions: {{ total_transactions }}</td>
+                <td style="color:#2ecc71;">↑ ₹{{ total_deposits }}</td>
+                <td style="color:#e74c3c;">↓ ₹{{ total_withdrawals }}</td>
+                <td style="color:#c39bd3;">🏷️ ₹{{ total_service_charges }}</td>
+                <td>—</td>
+            </tr>
+                    </tfoot>
+    </table>
+    {% else %}
+    <div class="no-data">📭 No transactions found.</div>
+    {% endif %}
+</div>
+
+
+<div class="pagination-bar" id="paginationBarBottom" style="display:none;">
+    <div class="pagination-info" id="pageInfoBottom">Showing rows…</div>
+    <div class="pagination-controls">
+        <button class="page-btn nav-btn" id="prevBtnBottom" onclick="changePage('txnTable',-1)" disabled>◀ Prev</button>
+        <span class="page-counter" id="pageCounterBottom">1 / 1</span>
+        <button class="page-btn nav-btn" id="nextBtnBottom" onclick="changePage('txnTable',1)">Next ▶</button>
+        <button class="page-btn full-btn" id="fullReportBtnBottom" onclick="toggleFullReport('txnTable')">📋 Full Report</button>
+    </div>
+</div>
+<div class="nav">
+    <a href="/report">⬅ Back to Reports</a>
+</div>
+
+<script>
+var pendingDeleteId = null;
+
+function openDeleteModal(txnId, accNo, name, amount) {
+    pendingDeleteId = txnId;
+    document.getElementById('modalTxnInfo').textContent = accNo + ' · ' + name + ' · ' + amount;
+    document.getElementById('adminPwd').value = '';
+    document.getElementById('pwdError').style.display = 'none';
+    document.getElementById('deleteModal').classList.add('show');
+    setTimeout(function(){ document.getElementById('adminPwd').focus(); }, 200);
+}
+
+function closeModal() {
+    document.getElementById('deleteModal').classList.remove('show');
+    pendingDeleteId = null;
+}
+
+function togglePwd() {
+    var inp = document.getElementById('adminPwd');
+    var ico = document.getElementById('eyeIcon');
+    if (inp.type === 'password') {
+        inp.type = 'text';
+        ico.className = 'fa fa-eye-slash';
+    } else {
+        inp.type = 'password';
+        ico.className = 'fa fa-eye';
+    }
+}
+
+function confirmDelete() {
+    var pwd = document.getElementById('adminPwd').value;
+    if (!pwd) {
+        document.getElementById('pwdError').textContent = '⚠ Please enter the admin password.';
+        document.getElementById('pwdError').style.display = 'block';
+        return;
+    }
+    var btn = document.getElementById('confirmDelBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Deleting...';
+
+    var form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '/delete_customer_transaction';
+
+    var fields = {
+        record_id:      pendingDeleteId,
+        source_table:   'transactions',
+        admin_password: pwd,
+        account_number: '',
+        redirect_to:    'deposit_report'
+    };
+    Object.keys(fields).forEach(function(key) {
+        var input = document.createElement('input');
+        input.type  = 'hidden';
+        input.name  = key;
+        input.value = fields[key];
+        form.appendChild(input);
+    });
+
+    document.body.appendChild(form);
+    form.submit();
+}
+
+function showToast(msg) {
+    var t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(function(){ t.classList.remove('show'); }, 3000);
+}
+
+// Close modal on overlay click
+document.getElementById('deleteModal').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+});
+
+// Enter key triggers delete
+document.getElementById('adminPwd') && document.getElementById('adminPwd').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') confirmDelete();
+});
+
+function filterTable() {
+    var filter = document.getElementById("searchInput").value.toLowerCase();
+    var table  = document.getElementById("txnTable");
+    if (!table) return;
+    var rows = table.getElementsByTagName("tbody")[0].getElementsByTagName("tr");
+    for (var i = 0; i < rows.length; i++) {
+        var acc  = rows[i].cells[1] ? rows[i].cells[1].textContent.toLowerCase() : '';
+        var name = rows[i].cells[2] ? rows[i].cells[2].textContent.toLowerCase() : '';
+        var mob  = rows[i].cells[3] ? rows[i].cells[3].textContent.toLowerCase() : '';
+        var type = rows[i].cells[4] ? rows[i].cells[4].textContent.toLowerCase() : '';
+        rows[i].style.display = (acc + name + mob + type).indexOf(filter) > -1 ? '' : 'none';
+    }
+}
+</script>
+
+
+<script>
+(function(){
+    var ROWS_PER_PAGE = 25;
+    var state = {
+        tableId:     'txnTable',
+        currentPage: 1,
+        isFull:      false,
+        allRows:     [],
+        filteredRows:[]
+    };
+
+    function getRows() {
+        var tbody = document.querySelector('#' + state.tableId + ' tbody');
+        if (!tbody) return [];
+        return Array.from(tbody.querySelectorAll('tr'));
+    }
+
+    function totalPages() {
+        return Math.max(1, Math.ceil(state.filteredRows.length / ROWS_PER_PAGE));
+    }
+
+    function syncBar(suffix) {
+        var total  = state.filteredRows.length;
+        var tp     = totalPages();
+        var start  = (state.currentPage - 1) * ROWS_PER_PAGE + 1;
+        var end    = Math.min(state.currentPage * ROWS_PER_PAGE, total);
+        var infoTx = state.isFull
+            ? 'Showing all ' + total + ' rows'
+            : (total === 0 ? 'No rows' : 'Showing ' + start + '\u2013' + end + ' of ' + total + ' rows');
+        var ctrTx  = state.isFull ? '\u2014' : (state.currentPage + ' / ' + tp);
+
+        var pi = document.getElementById('pageInfo'    + suffix);
+        var pc = document.getElementById('pageCounter' + suffix);
+        var pb = document.getElementById('prevBtn'     + suffix);
+        var nb = document.getElementById('nextBtn'     + suffix);
+        if (pi) pi.textContent = infoTx;
+        if (pc) pc.textContent = ctrTx;
+        if (pb) pb.disabled = state.isFull || state.currentPage === 1;
+        if (nb) nb.disabled = state.isFull || state.currentPage >= tp;
+    }
+
+    function renderPage() {
+        var start = (state.currentPage - 1) * ROWS_PER_PAGE;
+        var end   = start + ROWS_PER_PAGE;
+        state.allRows.forEach(function(r) { r.style.display = 'none'; });
+        state.filteredRows.forEach(function(r, i) {
+            r.style.display = (state.isFull || (i >= start && i < end)) ? '' : 'none';
+        });
+        syncBar('');
+        syncBar('Bottom');
+    }
+
+    window.changePage = function(tblId, delta) {
+        if (tblId !== state.tableId) return;
+        var np = state.currentPage + delta;
+        if (np < 1 || np > totalPages()) return;
+        state.currentPage = np;
+        renderPage();
+        var tbl = document.getElementById(state.tableId);
+        if (tbl) tbl.scrollIntoView({behavior:'smooth', block:'start'});
+    };
+
+    function applyFullStyle(suffix, full) {
+        var btn = document.getElementById('fullReportBtn' + suffix);
+        if (!btn) return;
+        if (full) {
+            btn.textContent = '\uD83D\uDCC4 Paginate';
+            btn.style.background = 'linear-gradient(90deg,#f7971e,#ffd200)';
+            btn.style.color = '#111';
+        } else {
+            btn.textContent = '\uD83D\uDCCB Full Report';
+            btn.style.background = 'linear-gradient(90deg,#00c6ff,#0072ff)';
+            btn.style.color = 'white';
+        }
+    }
+
+    window.toggleFullReport = function(tblId) {
+        if (tblId !== state.tableId) return;
+        state.isFull = !state.isFull;
+        applyFullStyle('',       state.isFull);
+        applyFullStyle('Bottom', state.isFull);
+        renderPage();
+    };
+
+    /* hook existing filterTable if present */
+    var origFilter = window.filterTable;
+    window.filterTable = function() {
+        if (origFilter) origFilter();
+        /* re-build filteredRows from visible rows */
+        state.filteredRows = state.allRows.filter(function(r) {
+            return r.style.display !== 'none';
+        });
+        state.currentPage = 1;
+        state.isFull = false;
+        applyFullStyle('',       false);
+        applyFullStyle('Bottom', false);
+        renderPage();
+    };
+
+    function init() {
+        state.allRows      = getRows();
+        state.filteredRows = state.allRows.slice();
+        if (state.allRows.length > ROWS_PER_PAGE) {
+            var pb = document.getElementById('paginationBar');
+            var pbb = document.getElementById('paginationBarBottom');
+            if (pb)  pb.style.display  = 'flex';
+            if (pbb) pbb.style.display = 'flex';
+        }
+        renderPage();
+    }
+
+    if (document.readyState !== 'loading') init();
+    else document.addEventListener('DOMContentLoaded', init);
+})();
+</script>
+
+</body>
+</html>

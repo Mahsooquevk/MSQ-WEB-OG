@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Customer Report</title>
+<link href="/static/fontawesome/css/all.min.css" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+    min-height: 100vh;
+    color: white;
+    padding: 30px 20px;
+}
+h1 { text-align: center; font-size: 28px; margin-bottom: 25px; color: #00e0ff; letter-spacing: 1px; }
+
+/* Search Box */
+.search-box {
+    max-width: 600px;
+    margin: 0 auto 30px auto;
+    display: flex;
+    gap: 10px;
+}
+.search-box input {
+    flex: 1;
+    padding: 13px 18px;
+    border-radius: 8px;
+    border: none;
+    font-size: 15px;
+    background: rgba(255,255,255,0.95);
+    color: #222;
+    outline: none;
+}
+.search-box button {
+    padding: 13px 25px;
+    border: none;
+    border-radius: 8px;
+    background: linear-gradient(90deg, #00c6ff, #0072ff);
+    color: white;
+    font-size: 15px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.3s;
+}
+.search-box button:hover { transform: scale(1.05); }
+
+/* Error */
+.error { text-align: center; color: #e74c3c; margin-bottom: 20px; font-size: 15px; }
+
+/* Customer Info Card */
+.info-card {
+    max-width: 1100px;
+    margin: 0 auto 25px auto;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 12px;
+    padding: 20px 25px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    align-items: center;
+    backdrop-filter: blur(10px);
+}
+.info-card .avatar {
+    width: 60px; height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(90deg, #00c6ff, #0072ff);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px; font-weight: bold;
+}
+.info-card .details { flex: 1; }
+.info-card .details h2 { font-size: 20px; margin-bottom: 5px; color: #00e0ff; }
+.info-card .details span { font-size: 13px; opacity: 0.8; margin-right: 20px; }
+
+/* Summary Cards */
+.summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 15px;
+    margin-bottom: 25px;
+    max-width: 900px;
+    margin-left: auto;
+    margin-right: auto;
+}
+.card {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    backdrop-filter: blur(10px);
+    transition: 0.3s;
+}
+.card:hover { transform: translateY(-4px); box-shadow: 0 10px 25px rgba(0,0,0,0.4); }
+.card i { font-size: 22px; margin-bottom: 8px; }
+.card .val { font-size: 20px; font-weight: bold; margin: 5px 0; }
+.card .lbl { font-size: 12px; opacity: 0.75; }
+.blue  i, .blue  .val { color: #00e0ff; }
+.green i, .green .val { color: #2ecc71; }
+.red   i, .red   .val { color: #e74c3c; }
+.orange i, .orange .val { color: #ffb347; }
+/* Centered tenure row */
+.tenure-row {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+}
+.tenure-row .card {
+    width: 200px;
+}
+@keyframes pulse-warn {
+    0%, 100% { box-shadow: 0 0 8px rgba(255,165,0,0.3); }
+    50%       { box-shadow: 0 0 18px rgba(255,165,0,0.7); }
+}
+
+/* Section Title */
+.section-title {
+    max-width: 1100px;
+    margin: 0 auto 10px auto;
+    font-size: 16px;
+    font-weight: bold;
+    color: #00e0ff;
+    letter-spacing: 0.5px;
+}
+
+/* Table */
+.table-wrap {
+    max-width: 1100px;
+    margin: 0 auto 30px auto;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.4);
+}
+table { width: 100%; border-collapse: collapse; background: rgba(255,255,255,0.06); }
+thead tr { background: linear-gradient(90deg, #00c6ff, #0072ff); }
+th { padding: 12px 15px; text-align: left; font-size: 13px; font-weight: 600; color: white; }
+td { padding: 11px 15px; font-size: 13px; border-bottom: 1px solid rgba(255,255,255,0.07); color: rgba(255,255,255,0.9); }
+tbody tr:hover { background: rgba(0,198,255,0.08); }
+tbody tr:last-child td { border-bottom: none; }
+tfoot td {
+    padding: 12px 15px;
+    background: rgba(0,114,255,0.2);
+    font-weight: bold;
+    font-size: 13px;
+    color: #00e0ff;
+    border-top: 1px solid rgba(255,255,255,0.15);
+}
+.badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: bold;
+}
+.badge.deposit    { background: rgba(46,204,113,0.2);  color: #2ecc71; border: 1px solid #2ecc71; }
+.badge.withdraw   { background: rgba(231,76,60,0.2);   color: #e74c3c; border: 1px solid #e74c3c; }
+.badge.new-loan   { background: rgba(255,140,0,0.2);   color: #ffb347; border: 1px solid #ffb347; }
+.badge.repayment  { background: rgba(0,198,255,0.2);   color: #00e0ff; border: 1px solid #00e0ff; }
+.badge.service    { background: rgba(155,89,182,0.2); color: #c39bd3; border: 1px solid #c39bd3; }
+.amount-green { color: #2ecc71; font-weight: bold; }
+.amount-red   { color: #e74c3c; font-weight: bold; }
+.amount-orange { color: #ffb347; font-weight: bold; }
+.amount-blue  { color: #00e0ff; font-weight: bold; }
+.amount-purple { color: #c39bd3; font-weight: bold; }
+.no-data { text-align: center; padding: 30px; opacity: 0.6; font-size: 15px; }
+
+/* Nav */
+.nav { display: none; }
+
+/* ── TOP NAV ── */
+.top-nav {
+    position: fixed;
+    top: 18px;
+    right: 22px;
+    display: flex;
+    gap: 10px;
+    z-index: 1000;
+}
+.top-nav a {
+    text-decoration: none;
+    padding: 9px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    transition: 0.25s;
+    white-space: nowrap;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.35);
+}
+.top-nav .btn-report {
+    background: rgba(255,255,255,0.12);
+    color: rgba(255,255,255,0.9);
+    border: 1px solid rgba(255,255,255,0.22);
+    backdrop-filter: blur(8px);
+}
+.top-nav .btn-report:hover { background: rgba(255,255,255,0.22); transform: translateY(-2px); }
+.top-nav .btn-dashboard {
+    background: linear-gradient(90deg, #00c6ff, #0072ff);
+    color: white;
+    border: 1px solid rgba(0,198,255,0.4);
+}
+.top-nav .btn-dashboard:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,198,255,0.5); }
+@media(max-width: 768px) {
+    .summary { grid-template-columns: repeat(2, 1fr); }
+    th, td { padding: 9px 8px; font-size: 12px; }
+    .search-box { flex-direction: column; }
+}
+
+/* ── PAGINATION ── */
+.pagination-bar {
+    max-width: 1100px;
+    margin: 0 auto 12px auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+.pagination-info {
+    font-size: 13px;
+    opacity: 0.75;
+}
+.pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.page-btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 7px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.25s;
+}
+.page-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+    transform: none !important;
+}
+.page-btn.nav-btn {
+    background: rgba(255,255,255,0.12);
+    color: rgba(255,255,255,0.9);
+    border: 1px solid rgba(255,255,255,0.2);
+}
+.page-btn.nav-btn:not(:disabled):hover {
+    background: rgba(255,255,255,0.22);
+    transform: translateY(-2px);
+}
+.page-btn.full-btn {
+    background: linear-gradient(90deg, #00c6ff, #0072ff);
+    color: white;
+    border: 1px solid rgba(0,198,255,0.4);
+    box-shadow: 0 4px 12px rgba(0,114,255,0.3);
+}
+.page-btn.full-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(0,198,255,0.5);
+}
+/* ── FILTER BAR ── */
+.filter-bar {
+    max-width: 1100px;
+    margin: 0 auto 14px auto;
+    display: none;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.13);
+    border-radius: 12px;
+    padding: 14px 18px;
+    backdrop-filter: blur(10px);
+}
+.filter-bar input,
+.filter-bar select {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 8px;
+    color: white;
+    font-size: 13px;
+    padding: 9px 13px;
+    outline: none;
+    transition: border 0.2s, background 0.2s;
+}
+.filter-bar input::placeholder { color: rgba(255,255,255,0.45); }
+.filter-bar input:focus,
+.filter-bar select:focus {
+    border-color: #00c6ff;
+    background: rgba(0,198,255,0.1);
+}
+.filter-bar select option { background: #1a3a4a; color: white; }
+.filter-input-ref  { flex: 1; min-width: 160px; }
+.filter-input-amt  { width: 150px; }
+.filter-select-type { width: 180px; }
+.filter-clear-btn {
+    padding: 9px 16px;
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 8px;
+    background: rgba(255,255,255,0.08);
+    color: rgba(255,255,255,0.8);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s;
+    white-space: nowrap;
+}
+.filter-clear-btn:hover { background: rgba(255,255,255,0.18); }
+.filter-label {
+    font-size: 12px;
+    opacity: 0.6;
+    font-weight: 600;
+    letter-spacing: 0.4px;
+    white-space: nowrap;
+}
+.filter-result-badge {
+    margin-left: auto;
+    font-size: 12px;
+    color: #00e0ff;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+/* ── ── ── ── ── ── */
+.page-counter {
+    font-size: 13px;
+    font-weight: 600;
+    color: #00e0ff;
+    min-width: 80px;
+    text-align: center;
+}
+</style>
+</head>
+
+<body>
+
+<div class="top-nav">
+    <a href="/report" class="btn-report">⬅ Reports</a>
+    <a href="/dashboard" class="btn-dashboard">🏠 Dashboard</a>
+</div>
+
+<h1><i class="fa fa-user-circle"></i> Customer Report</h1>
+
+<!-- Search -->
+<form method="GET" action="/customer_report">
+    <div class="search-box">
+        <input type="text" name="q" placeholder="Enter Account No / Mobile / Name..."
+               value="{{ query or '' }}" autofocus required autocomplete="off">
+        <button type="submit"><i class="fa fa-search"></i> Search</button>
+    </div>
+</form>
+
+{% if error %}
+<div class="error">{{ error }}</div>
+{% endif %}
+
+<!-- Search Results List -->
+{% if matches and not customer %}
+<div style="max-width:600px; margin: 0 auto 25px auto;">
+    {% for m in matches %}
+    <a href="/customer_report?q={{ m.account_number }}" style="
+        display:flex; align-items:center; gap:15px;
+        background:rgba(255,255,255,0.08);
+        border:1px solid rgba(255,255,255,0.15);
+        border-radius:12px; padding:15px 20px;
+        margin-bottom:10px; text-decoration:none;
+        color:white; transition:0.3s; backdrop-filter:blur(10px);">
+        <div style="width:45px;height:45px;border-radius:50%;
+                    background:linear-gradient(90deg,#00c6ff,#0072ff);
+                    display:flex;align-items:center;justify-content:center;
+                    font-size:20px;font-weight:bold;flex-shrink:0;">
+            {{ m.name[0].upper() }}
+        </div>
+        <div>
+            <div style="font-weight:bold;font-size:15px;color:#00e0ff;">{{ m.name }}</div>
+            <div style="font-size:12px;opacity:0.75;margin-top:3px;">
+                <i class="fa fa-hashtag"></i> {{ m.account_number }}
+                &nbsp;&nbsp;
+                <i class="fa fa-phone"></i> {{ m.mobile }}
+            </div>
+        </div>
+        <div style="margin-left:auto;color:#00e0ff;">
+            <i class="fa fa-chevron-right"></i>
+        </div>
+    </a>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% if error %}
+<div class="error">{{ error }}</div>
+{% endif %}
+
+{% if customer %}
+
+<!-- Customer Info -->
+<div class="info-card">
+    <div class="avatar">{{ customer.name[0].upper() }}</div>
+    <div class="details">
+        <h2>{{ customer.name }}</h2>
+        <span><i class="fa fa-hashtag"></i> Acc: {{ customer.account_number }}</span>
+        <span><i class="fa fa-phone"></i> {{ customer.mobile }}</span>
+        <span><i class="fa fa-map-marker-alt"></i> {{ customer.address or 'N/A' }}</span>
+    </div>
+</div>
+
+
+{% if customer.is_closed %}
+<!-- ── CLOSED ACCOUNT BANNER ── -->
+<div style="max-width:1100px;margin:0 auto 20px auto;
+            background:linear-gradient(135deg,rgba(180,0,0,0.18),rgba(100,0,0,0.12));
+            border:2px solid rgba(231,76,60,0.6);
+            border-radius:14px;padding:22px 26px;
+            display:flex;align-items:center;gap:18px;">
+    <div style="width:60px;height:60px;border-radius:50%;
+                background:rgba(231,76,60,0.15);border:2px solid #e74c3c;
+                display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0;">
+        🔒
+    </div>
+    <div style="flex:1;">
+        <div style="font-size:18px;font-weight:800;color:#ff6b6b;letter-spacing:0.5px;margin-bottom:6px;">
+            ACCOUNT CLOSED
+        </div>
+        <div style="font-size:13px;opacity:0.75;line-height:1.6;">
+            This account was permanently closed on
+            <strong style="color:#fff;">{{ customer.closed_date[:10] if customer.closed_date else 'N/A' }}</strong>.
+            No further deposits, withdrawals, loans, or service charges will be applied to this account.
+        </div>
+        {% if customer.closure_note %}
+        <div style="margin-top:8px;font-size:12px;color:#ffb3b3;opacity:0.85;">
+            📝 Note: {{ customer.closure_note }}
+        </div>
+        {% endif %}
+    </div>
+    <div style="text-align:right;flex-shrink:0;">
+        <div style="font-size:11px;opacity:0.5;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Settlement</div>
+        <div style="font-size:22px;font-weight:800;
+                    color:{% if customer.settlement_amount >= 0 %}#00ffa3{% else %}#ff6b6b{% endif %};">
+            ₹{{ "%.2f"|format(customer.settlement_amount or 0) }}
+        </div>
+        <div style="font-size:11px;opacity:0.5;margin-top:3px;">
+            {% if customer.settlement_amount > 0 %}Paid out to member
+            {% elif customer.settlement_amount < 0 %}Amount outstanding
+            {% else %}Zero balance settled{% endif %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Summary -->
+<div class="summary">
+
+    <!-- 1. Deposit Balance — always show -->
+    <div class="card {% if deposit_balance < 0 %}red{% else %}blue{% endif %}">
+        <i class="fa fa-wallet"></i>
+        <div class="val">₹{{ deposit_balance }}</div>
+        <div class="lbl">Deposit Balance
+            <span style="display:block;font-size:10px;opacity:0.75;margin-top:3px;">Current Balance</span>
+        </div>
+    </div>
+
+    <!-- 2. Total Deposited — hide if 0 -->
+    {% if total_deposits > 0 %}
+    <div class="card green">
+        <i class="fa fa-coins"></i>
+        <div class="val">₹{{ total_deposits }}</div>
+        <div class="lbl">Total Deposited
+            <span style="display:block;font-size:10px;opacity:0.75;margin-top:3px;">All Time</span>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 3. Total Withdrawn — yellow, hide if 0 -->
+    {% if total_withdrawals > 0 %}
+    <div class="card orange">
+        <i class="fa fa-hand-holding-usd"></i>
+        <div class="val">₹{{ total_withdrawals }}</div>
+        <div class="lbl">Total Withdrawn
+            <span style="display:block;font-size:10px;opacity:0.75;margin-top:3px;">{{ latest_loan_date }}</span>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 4. Service Charge Paid — purple, hide if 0 -->
+    {% if total_service_charged > 0 %}
+    <div class="card" style="border-color:rgba(155,89,182,0.4);background:rgba(155,89,182,0.08);">
+        <i class="fa fa-file-invoice" style="color:#c39bd3;font-size:22px;margin-bottom:8px;"></i>
+        <div class="val" style="color:#c39bd3;">₹{{ total_service_charged }}</div>
+        <div class="lbl" style="color:#c39bd3;">Service Charge Paid
+            <span style="display:block;font-size:10px;opacity:0.75;margin-top:3px;">Collected So Far</span>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 5. Service Charge Due — red, hide if 0 or account closed -->
+    {% if pending_service_charge > 0 and not customer.is_closed %}
+    <div class="card red" style="border-color:rgba(231,76,60,0.7);background:rgba(231,76,60,0.1);animation:pulse-warn 2s infinite;">
+        <i class="fa fa-exclamation-triangle" style="color:#e74c3c;font-size:22px;margin-bottom:8px;"></i>
+        <div class="val" style="color:#e74c3c;">{{ pending_dues_years }} Dues / ₹{{ pending_service_charge }}</div>
+        <div class="lbl" style="color:#e74c3c;font-weight:600;">Service Charge Due
+            <span style="display:block;font-size:10px;opacity:0.85;margin-top:3px;">⚠ Payment Pending</span>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 6. Total Loans Given — green, hide if 0 -->
+    {% if total_loaned > 0 %}
+    <div class="card green">
+        <i class="fa fa-hand-holding-usd"></i>
+        <div class="val">₹{{ total_loaned }}</div>
+        <div class="lbl">Total Loans Given
+            <span style="display:block;font-size:10px;opacity:0.75;margin-top:3px;">All Time</span>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 7. Loan Repaid — hide if 0 -->
+    {% if total_repaid > 0 %}
+    <div class="card green">
+        <i class="fa fa-redo"></i>
+        <div class="val">₹{{ total_repaid }}</div>
+        <div class="lbl">Loan Repaid
+            <span style="display:block;font-size:10px;opacity:0.75;margin-top:3px;">Total Paid Back</span>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 8. Latest Loan Given — orange, hide if no loan -->
+    {% if latest_loan_amount > 0 %}
+    <div class="card" style="border-color:rgba(255,214,0,0.5);background:rgba(255,214,0,0.07);">
+        <i class="fa fa-money-bill-wave" style="color:#ffd700;font-size:22px;margin-bottom:8px;"></i>
+        <div class="val" style="color:#ffd700;">₹{{ latest_loan_amount }}</div>
+        <div class="lbl" style="color:#ffd700;">Latest Loan Given
+            <span style="display:block;font-size:10px;opacity:0.75;margin-top:3px;">All Time</span>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 9. Tenures Paid — yellow, hide if no tenure -->
+    {% if total_tenures > 0 %}
+    <div class="card" style="border-color:rgba(255,214,0,0.5);background:rgba(255,214,0,0.07);">
+        <i class="fa fa-calendar-check" style="color:#ffd700;font-size:22px;margin-bottom:8px;"></i>
+        <div class="val" style="color:#ffd700;">{{ tenures_paid }} / {{ total_tenures }} Paid · ₹{{ tenures_paid_amount | int }}</div>
+        <div class="lbl" style="color:#ffd700;font-weight:600;">Tenures Paid</div>
+    </div>
+    {% endif %}
+
+    <!-- 10. Loan Outstanding — red pulsing, hide if 0 -->
+    {% if loan_outstanding > 0 %}
+    <div class="card red" style="border-color:rgba(231,76,60,0.7);background:rgba(231,76,60,0.1);animation:pulse-warn 2s infinite;">
+        <i class="fa fa-exclamation-circle"></i>
+        <div class="val">₹{{ loan_outstanding }}</div>
+        <div class="lbl" style="font-weight:600;">Loan Outstanding
+            <span style="display:block;font-size:10px;opacity:0.85;margin-top:3px;">⚠ To Be Repaid</span>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 11. Loan Due — red pulsing, hide if no pending or account closed -->
+    {% if total_tenures > 0 and tenures_pending > 0 and not customer.is_closed %}
+    <div class="card red" style="border-color:rgba(231,76,60,0.7);background:rgba(231,76,60,0.1);animation:pulse-warn 2s infinite;">
+        <i class="fa fa-clock"></i>
+        <div class="val">{{ tenures_pending }} Months / ₹{{ (tenures_pending * monthly_due_amount) | int }}</div>
+        <div class="lbl" style="font-weight:600;">Loan Due
+            <span style="display:block;font-size:10px;opacity:0.8;margin-top:3px;">₹{{ monthly_due_amount | int }}/month</span>
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+
+{% if pending_service_charge > 0 and not customer.is_closed %}
+<div style="max-width:1100px;margin:-10px auto 20px auto;padding:14px 20px;border-radius:10px;
+            background:rgba(255,165,0,0.1);border:1px solid rgba(255,165,0,0.45);
+            display:flex;align-items:center;gap:12px;">
+    <i class="fa fa-exclamation-triangle" style="color:#ffa500;font-size:20px;"></i>
+    <div>
+        <div style="font-weight:700;color:#ffa500;font-size:14px;">⚠ Service Charge Due: ₹{{ pending_service_charge }}</div>
+        <div style="font-size:12px;opacity:0.75;margin-top:3px;">
+            Annual service charge is pending. Loan cannot be issued until this is cleared.
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if tenures_pending > 0 and not customer.is_closed %}
+<div style="max-width:1100px;margin:-10px auto 20px auto;padding:14px 20px;border-radius:10px;
+            background:rgba(231,76,60,0.1);border:1px solid rgba(231,76,60,0.45);
+            display:flex;align-items:center;gap:12px;">
+    <i class="fa fa-clock" style="color:#e74c3c;font-size:20px;"></i>
+    <div>
+        <div style="font-weight:700;color:#e74c3c;font-size:14px;">⚠ Loan Repayment Due: {{ tenures_pending }} Months / ₹{{ (tenures_pending * monthly_due_amount) | int }}</div>
+        <div style="font-size:12px;opacity:0.75;margin-top:3px;">
+            Monthly loan repayment is overdue. ₹{{ monthly_due_amount | int }}/month — please clear pending dues at the earliest.
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- All Transactions -->
+<div class="section-title"><i class="fa fa-list"></i> All Transactions</div>
+
+<!-- Filter Bar -->
+<div class="filter-bar" id="filterBar">
+    <span class="filter-label">🔍 FILTER</span>
+
+    <select class="filter-select-type" id="filterType" onchange="applyFilters()">
+        <option value="">All Types</option>
+        <option value="deposit">💰 Deposit</option>
+        <option value="withdraw">💸 Withdrawal</option>
+        <option value="new_loan">🏦 New Loan</option>
+        <option value="repayment">✅ Loan Repayment</option>
+        <option value="service_charge">🏷️ Service Charge</option>
+    </select>
+
+    <input class="filter-input-ref" type="text" id="filterRef"
+           placeholder="Search Reference..." oninput="applyFilters()">
+
+    <input class="filter-input-amt" type="text" id="filterAmt"
+           placeholder="Search Amount..." oninput="applyFilters()">
+
+    <button class="filter-clear-btn" onclick="clearFilters()">✕ Clear</button>
+    <span class="filter-result-badge" id="filterBadge"></span>
+</div>
+
+<!-- Pagination Bar -->
+<div class="pagination-bar" id="paginationBar" style="display:none;">
+    <div class="pagination-info" id="pageInfo">Showing 1–25 of N transactions</div>
+    <div class="pagination-controls">
+        <button class="page-btn nav-btn" id="prevBtn" onclick="changePage(-1)" disabled>◀ Prev</button>
+        <span class="page-counter" id="pageCounter">1 / 1</span>
+        <button class="page-btn nav-btn" id="nextBtn" onclick="changePage(1)">Next ▶</button>
+        <button class="page-btn full-btn" id="fullReportBtn" onclick="toggleFullReport()">📋 Full Report</button>
+    </div>
+</div>
+
+<div class="table-wrap">
+    {% if all_transactions %}
+    <table>
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Type</th>
+                <th>Reference</th>
+                <th>Amount</th>
+                <th>Date & Time</th>
+				<th><i class="fa fa-user-shield"></i> Guarantor 1</th>
+				<th><i class="fa fa-user-shield"></i> Guarantor 2</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for t in all_transactions %}
+            <tr>
+                <td>{{ loop.index }}</td>
+                <td>
+                    {% if t.txn_type == 'deposit' %}
+                    <span class="badge deposit">💰 Deposit</span>
+                    {% elif t.txn_type == 'withdraw' %}
+                    <span class="badge withdraw">💸 Withdrawal</span>
+                    {% elif t.txn_type == 'service_charge' %}
+                    <span class="badge service">🏷️ Service Charge</span>
+                    {% elif t.txn_type == 'new_loan' %}
+                    <span class="badge new-loan">🏦 New Loan</span>
+                    {% else %}
+                    <span class="badge repayment">✅ Loan Repayment</span>
+                    {% endif %}
+                </td>
+                <td>{{ t.reference or '-' }}</td>
+                <td class="
+                    {% if t.txn_type == 'deposit' %}amount-green
+                    {% elif t.txn_type == 'withdraw' %}amount-red
+                    {% elif t.txn_type == 'service_charge' %}amount-purple
+                    {% elif t.txn_type == 'new_loan' %}amount-orange
+                    {% else %}amount-blue{% endif %}">
+                    ₹{{ t.amount }}
+                    {% if t.remark %}<div style="font-size:10px;opacity:0.6;margin-top:2px;">{{ t.remark }}</div>{% endif %}
+                </td>
+                <td>{{ t.date[:16] if t.date else '-' }}</td>
+				{% if t.txn_type == 'new_loan' %}
+				<td>
+					{% if t.guarantor1_name %}
+						<div style="font-weight:600;color:#fff;">{{ t.guarantor1_name }}</div>
+						<div style="font-size:11px;opacity:0.55;margin-top:2px;">📱 {{ t.guarantor1_mobile }}</div>
+						{% else %}
+						<span style="opacity:0.35;font-size:12px;">—</span>
+						{% endif %}
+				</td>
+				<td>
+					{% if t.guarantor2_name %}
+						<div style="font-weight:600;color:#fff;">{{ t.guarantor2_name }}</div>
+						<div style="font-size:11px;opacity:0.55;margin-top:2px;">📱 {{ t.guarantor2_mobile }}</div>
+						{% else %}
+						<span style="opacity:0.35;font-size:12px;">—</span>
+						{% endif %}
+				</td>
+					{% else %}
+					<td colspan="2" style="text-align:center;opacity:0.25;font-size:12px;">—</td>
+					{% endif %}
+            </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="3">Deposit Balance</td>
+                <td colspan="4" {% if deposit_balance < 0 %}style="color:#e74c3c;"{% else %}style="color:#2ecc71;"{% endif %}>₹{{ deposit_balance }}</td>
+            </tr>
+            {% if pending_service_charge > 0 %}
+            <tr>
+                <td colspan="3" style="color:#ffa500;">⚠ Service Charge Due</td>
+                <td colspan="4" style="color:#ffa500;">₹{{ pending_service_charge }}</td>
+            </tr>
+            {% endif %}
+        </tfoot>
+    </table>
+    {% else %}
+    <div class="no-data">📭 No transactions found.</div>
+    {% endif %}
+</div>
+
+<!-- Bottom Pagination Bar -->
+<div class="pagination-bar" id="paginationBarBottom" style="display:none; margin-top: 10px;">
+    <div class="pagination-info" id="pageInfoBottom">Showing 1–25 of N transactions</div>
+    <div class="pagination-controls">
+        <button class="page-btn nav-btn" id="prevBtnBottom" onclick="changePage(-1)" disabled>◀ Prev</button>
+        <span class="page-counter" id="pageCounterBottom">1 / 1</span>
+        <button class="page-btn nav-btn" id="nextBtnBottom" onclick="changePage(1)">Next ▶</button>
+        <button class="page-btn full-btn" id="fullReportBtnBottom" onclick="toggleFullReport()">📋 Full Report</button>
+    </div>
+</div>
+
+{% endif %}
+
+<div class="nav"><a href="/report">⬅ Back to Reports</a></div>
+
+<script>
+(function () {
+    const ROWS_PER_PAGE = 25;
+    let currentPage = 1;
+    let isFullReport = false;
+    let allRows = [];       // all <tr> elements
+    let filteredRows = [];  // after filters applied
+
+    /* ── helpers to read filter values ── */
+    function getFilterType() { return (document.getElementById('filterType') || {}).value || ''; }
+    function getFilterRef()  { return ((document.getElementById('filterRef')  || {}).value || '').trim().toLowerCase(); }
+    function getFilterAmt()  { return ((document.getElementById('filterAmt')  || {}).value || '').trim().toLowerCase(); }
+
+    /* ── map txn_type keyword → badge text substring for matching ── */
+    const TYPE_MAP = {
+        deposit:        'deposit',
+        withdraw:       'withdrawal',
+        new_loan:       'new loan',
+        repayment:      'loan repayment',
+        service_charge: 'service charge'
+    };
+
+    function rowMatchesFilters(row) {
+        const type  = getFilterType();
+        const ref   = getFilterRef();
+        const amt   = getFilterAmt();
+
+        if (type) {
+            const badge = row.querySelector('.badge');
+            const badgeText = badge ? badge.textContent.toLowerCase() : '';
+            if (!badgeText.includes(TYPE_MAP[type] || type)) return false;
+        }
+        if (ref) {
+            // col index 2 = Reference
+            const cells = row.querySelectorAll('td');
+            const refText = cells[2] ? cells[2].textContent.toLowerCase() : '';
+            if (!refText.includes(ref)) return false;
+        }
+        if (amt) {
+            // col index 3 = Amount
+            const cells = row.querySelectorAll('td');
+            const amtText = cells[3] ? cells[3].textContent.toLowerCase() : '';
+            if (!amtText.includes(amt)) return false;
+        }
+        return true;
+    }
+
+    /* ── apply filters, reset to page 1, re-render ── */
+    window.applyFilters = function () {
+        isFullReport = false;
+        applyFullStyle('fullReportBtn', false);
+        applyFullStyle('fullReportBtnBottom', false);
+
+        filteredRows = allRows.filter(rowMatchesFilters);
+        currentPage = 1;
+
+        // hide all first
+        allRows.forEach(r => r.style.display = 'none');
+
+        const badge = document.getElementById('filterBadge');
+        const hasFilter = getFilterType() || getFilterRef() || getFilterAmt();
+
+        if (filteredRows.length === 0) {
+            badge.textContent = '0 results';
+            syncBar('',       'No matching transactions', '\u2014', true, true);
+            syncBar('Bottom', 'No matching transactions', '\u2014', true, true);
+            return;
+        }
+
+        badge.textContent = hasFilter ? filteredRows.length + ' result' + (filteredRows.length !== 1 ? 's' : '') : '';
+        renderPage();
+    };
+
+    window.clearFilters = function () {
+        document.getElementById('filterType').value = '';
+        document.getElementById('filterRef').value  = '';
+        document.getElementById('filterAmt').value  = '';
+        document.getElementById('filterBadge').textContent = '';
+        filteredRows = [...allRows];
+        currentPage = 1;
+        renderPage();
+    };
+
+    /* ── pagination helpers ── */
+    function totalPages() {
+        return Math.max(1, Math.ceil(filteredRows.length / ROWS_PER_PAGE));
+    }
+
+    function syncBar(suffix, text, counter, prevDis, nextDis) {
+        var pi = document.getElementById('pageInfo'    + suffix);
+        var pc = document.getElementById('pageCounter' + suffix);
+        var pb = document.getElementById('prevBtn'     + suffix);
+        var nb = document.getElementById('nextBtn'     + suffix);
+        if (pi) pi.textContent = text;
+        if (pc) pc.textContent = counter;
+        if (pb) pb.disabled = prevDis;
+        if (nb) nb.disabled = nextDis;
+    }
+
+    function renderPage() {
+        const start = (currentPage - 1) * ROWS_PER_PAGE;
+        const end   = start + ROWS_PER_PAGE;
+
+        // hide all, show only filtered slice
+        allRows.forEach(r => r.style.display = 'none');
+        filteredRows.forEach((row, i) => {
+            row.style.display = (i >= start && i < end) ? '' : 'none';
+        });
+
+        const total = filteredRows.length;
+        const tp    = totalPages();
+        const infoText    = total === 0
+            ? 'No transactions'
+            : 'Showing ' + (start + 1) + '\u2013' + Math.min(end, total) + ' of ' + total + ' transactions';
+        const counterText = tp > 0 ? currentPage + ' / ' + tp : '\u2014';
+
+        syncBar('',       infoText, counterText, currentPage === 1, currentPage >= tp);
+        syncBar('Bottom', infoText, counterText, currentPage === 1, currentPage >= tp);
+    }
+
+    window.changePage = function (delta) {
+        const newPage = currentPage + delta;
+        if (newPage < 1 || newPage > totalPages()) return;
+        currentPage = newPage;
+        renderPage();
+        document.querySelector('.section-title').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+
+    function applyFullStyle(btnId, isFullMode) {
+        var btn = document.getElementById(btnId);
+        if (!btn) return;
+        if (isFullMode) {
+            btn.textContent = '\uD83D\uDCC4 Paginate';
+            btn.style.background = 'linear-gradient(90deg, #f7971e, #ffd200)';
+            btn.style.color = '#111';
+        } else {
+            btn.textContent = '\uD83D\uDCCB Full Report';
+            btn.style.background = 'linear-gradient(90deg, #00c6ff, #0072ff)';
+            btn.style.color = 'white';
+        }
+    }
+
+    window.toggleFullReport = function () {
+        isFullReport = !isFullReport;
+        applyFullStyle('fullReportBtn',       isFullReport);
+        applyFullStyle('fullReportBtnBottom', isFullReport);
+
+        if (isFullReport) {
+            filteredRows.forEach(r => r.style.display = '');
+            const infoText = 'Showing all ' + filteredRows.length + ' transactions';
+            syncBar('',       infoText, '\u2014', true, true);
+            syncBar('Bottom', infoText, '\u2014', true, true);
+        } else {
+            renderPage();
+        }
+    };
+
+    /* ── init ── */
+    function init() {
+        const tbody = document.querySelector('table tbody');
+        if (!tbody) return;
+
+        allRows      = Array.from(tbody.querySelectorAll('tr'));
+        filteredRows = [...allRows];
+
+        // Always show filter bar if there's a table
+        var fb = document.getElementById('filterBar');
+        if (fb) fb.style.display = 'flex';
+
+        // Show pagination only if > 25 rows
+        if (allRows.length > ROWS_PER_PAGE) {
+            document.getElementById('paginationBar').style.display       = 'flex';
+            document.getElementById('paginationBarBottom').style.display = 'flex';
+        }
+
+        renderPage();
+    }
+
+    if (document.readyState !== 'loading') init();
+    else document.addEventListener('DOMContentLoaded', init);
+})();
+</script>
+
+</body>
+</html>

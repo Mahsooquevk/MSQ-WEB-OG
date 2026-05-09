@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Customer List</title>
+
+<link href="/static/fontawesome/css/all.min.css" rel="stylesheet">
+
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    font-family: 'Segoe UI', Arial;
+    background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+    color: white;
+    min-height: 100vh;
+    padding: 30px 20px;
+}
+
+h1 {
+    text-align: center;
+    color: #00e0ff;
+    margin-bottom: 25px;
+}
+
+/* Search */
+.search-box {
+    max-width: 700px;
+    margin: 0 auto 25px auto;
+}
+
+.search-box input {
+    width: 100%;
+    padding: 12px 15px;
+    border-radius: 8px;
+    border: none;
+    outline: none;
+    background: rgba(255,255,255,0.95);
+    color: #222;
+}
+
+/* Summary */
+.summary {
+    max-width: 700px;
+    margin: 0 auto 25px auto;
+    display: flex;
+    justify-content: center;
+}
+
+.card {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    padding: 20px 30px;
+    border-radius: 12px;
+    text-align: center;
+    backdrop-filter: blur(10px);
+}
+
+.card .val { font-size: 22px; font-weight: bold; color: #00e0ff; }
+.card .lbl { font-size: 13px; opacity: 0.8; }
+
+/* Table */
+.table-wrap {
+    max-width: 1100px;
+    margin: auto;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 5px 25px rgba(0,0,0,0.5);
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background: rgba(255,255,255,0.06);
+}
+
+thead {
+    background: linear-gradient(90deg, #00c6ff, #0072ff);
+}
+
+th, td {
+    padding: 12px;
+    font-size: 13px;
+}
+
+th { text-align: left; }
+
+tbody tr {
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+}
+
+tbody tr:hover {
+    background: rgba(0,198,255,0.1);
+}
+
+/* Avatar */
+.avatar {
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    background: linear-gradient(90deg,#00c6ff,#0072ff);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+}
+
+/* Delete button */
+.delete-btn {
+    background: rgba(231,76,60,0.15);
+    border: 1px solid rgba(231,76,60,0.5);
+    color: #e74c3c;
+    padding: 5px 11px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    transition: 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+.delete-btn:hover {
+    background: rgba(231,76,60,0.35);
+    border-color: #e74c3c;
+    transform: scale(1.05);
+}
+
+/* DELETE CONFIRM MODAL */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(5px);
+}
+.modal-overlay.show { display: flex; }
+.modal-box {
+    background: linear-gradient(145deg, #0f2027, #1a3a4a, #2c5364);
+    border: 1px solid rgba(231,76,60,0.4);
+    border-radius: 20px;
+    padding: 40px 36px 32px;
+    text-align: center;
+    color: white;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6), 0 0 40px rgba(231,76,60,0.1);
+    max-width: 380px;
+    width: 90%;
+    animation: popIn 0.3s cubic-bezier(0.34,1.56,0.64,1);
+}
+@keyframes popIn {
+    from { transform: scale(0.75); opacity: 0; }
+    to   { transform: scale(1);   opacity: 1; }
+}
+.modal-icon {
+    width: 70px; height: 70px;
+    border-radius: 50%;
+    background: rgba(231,76,60,0.12);
+    border: 2px solid rgba(231,76,60,0.4);
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 18px;
+    font-size: 28px;
+}
+.modal-box h3 { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+.modal-box p  { font-size: 13px; opacity: 0.7; margin-bottom: 20px; line-height: 1.6; }
+.modal-info {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 10px;
+    padding: 12px 16px;
+    text-align: left;
+    font-size: 12px;
+    margin-bottom: 20px;
+}
+.modal-info span { display: block; opacity: 0.6; margin-bottom: 3px; font-size: 11px; }
+.modal-info strong { color: #00e0ff; font-size: 13px; }
+.pwd-wrap { position: relative; margin-bottom: 20px; }
+.pwd-wrap input {
+    width: 100%;
+    padding: 11px 40px 11px 14px;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.2);
+    background: rgba(255,255,255,0.08);
+    color: white;
+    font-size: 14px;
+    outline: none;
+    transition: 0.2s;
+}
+.pwd-wrap input:focus { border-color: #e74c3c; background: rgba(255,255,255,0.12); }
+.pwd-wrap input::placeholder { opacity: 0.4; }
+.pwd-toggle {
+    position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+    cursor: pointer; opacity: 0.5; font-size: 14px;
+}
+.pwd-toggle:hover { opacity: 0.9; }
+.pwd-error {
+    color: #e74c3c; font-size: 12px; margin-top: -14px; margin-bottom: 14px;
+    text-align: left; display: none;
+}
+.divider { height: 1px; background: rgba(255,255,255,0.1); margin-bottom: 20px; }
+.modal-btns { display: flex; gap: 10px; }
+.btn-cancel {
+    flex: 1; padding: 12px; border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.2);
+    background: rgba(255,255,255,0.07);
+    color: white; font-size: 14px; font-weight: 600;
+    cursor: pointer; transition: 0.2s;
+}
+.btn-cancel:hover { background: rgba(255,255,255,0.14); }
+.btn-confirm-del {
+    flex: 1; padding: 12px; border-radius: 10px; border: none;
+    background: linear-gradient(90deg, #c0392b, #e74c3c);
+    color: white; font-size: 14px; font-weight: 700;
+    cursor: pointer; transition: 0.2s;
+    box-shadow: 0 4px 15px rgba(231,76,60,0.35);
+}
+.btn-confirm-del:hover { transform: scale(1.03); box-shadow: 0 6px 20px rgba(231,76,60,0.55); }
+.btn-confirm-del:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+/* TOAST */
+.toast {
+    position: fixed;
+    bottom: 30px; left: 50%; transform: translateX(-50%) translateY(80px);
+    background: rgba(46,204,113,0.95);
+    color: white; font-size: 14px; font-weight: 600;
+    padding: 12px 24px; border-radius: 30px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.4);
+    z-index: 99999; transition: transform 0.4s ease;
+    white-space: nowrap;
+}
+.toast.show { transform: translateX(-50%) translateY(0); }
+
+/* Nav */
+.nav { display: none; }
+
+/* Top Nav */
+.top-nav {
+    position: fixed;
+    top: 18px;
+    right: 22px;
+    display: flex;
+    gap: 10px;
+    z-index: 1000;
+}
+.top-nav a {
+    text-decoration: none;
+    padding: 9px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    transition: 0.25s;
+    white-space: nowrap;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.35);
+}
+.top-nav .btn-report {
+    background: rgba(255,255,255,0.12);
+    color: rgba(255,255,255,0.9);
+    border: 1px solid rgba(255,255,255,0.22);
+    backdrop-filter: blur(8px);
+}
+.top-nav .btn-report:hover { background: rgba(255,255,255,0.22); transform: translateY(-2px); }
+.top-nav .btn-dashboard {
+    background: linear-gradient(90deg, #00c6ff, #0072ff);
+    color: white;
+    border: 1px solid rgba(0,198,255,0.4);
+}
+.top-nav .btn-dashboard:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,198,255,0.5); }
+
+/* Edit button */
+.edit-btn {
+    background: rgba(0,198,255,0.15);
+    border: 1px solid rgba(0,198,255,0.5);
+    color: #00e0ff;
+    padding: 5px 11px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    transition: 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+.edit-btn:hover {
+    background: rgba(0,198,255,0.35);
+    border-color: #00e0ff;
+    transform: scale(1.05);
+}
+
+/* Edit Modal */
+.edit-modal-box {
+    background: linear-gradient(145deg, #0f2027, #1a3a4a, #2c5364);
+    border: 1px solid rgba(0,198,255,0.4);
+    border-radius: 20px;
+    padding: 40px 36px 32px;
+    text-align: center;
+    color: white;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6), 0 0 40px rgba(0,198,255,0.1);
+    max-width: 400px;
+    width: 90%;
+    animation: popIn 0.3s cubic-bezier(0.34,1.56,0.64,1);
+}
+.edit-modal-box h3 { font-size: 20px; font-weight: 700; margin-bottom: 20px; color: #00e0ff; }
+.edit-field { margin-bottom: 14px; text-align: left; }
+.edit-field label { font-size: 12px; opacity: 0.65; display: block; margin-bottom: 5px; }
+.edit-field input {
+    width: 100%;
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.2);
+    background: rgba(255,255,255,0.08);
+    color: white;
+    font-size: 14px;
+    outline: none;
+    transition: 0.2s;
+}
+.edit-field input:focus { border-color: #00e0ff; background: rgba(255,255,255,0.12); }
+.edit-field input::placeholder { opacity: 0.4; }
+.btn-confirm-edit {
+    flex: 1; padding: 12px; border-radius: 10px; border: none;
+    background: linear-gradient(90deg, #00c6ff, #0072ff);
+    color: white; font-size: 14px; font-weight: 700;
+    cursor: pointer; transition: 0.2s;
+    box-shadow: 0 4px 15px rgba(0,114,255,0.35);
+}
+.btn-confirm-edit:hover { transform: scale(1.03); box-shadow: 0 6px 20px rgba(0,198,255,0.55); }
+.btn-confirm-edit:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+/* Closed account row */
+.closed-row { opacity: 0.55; }
+.closed-row .avatar { background: linear-gradient(90deg, #636363, #3a3a3a) !important; }
+.closed-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: rgba(231,76,60,0.15); border: 1px solid rgba(231,76,60,0.4);
+    color: #ff6b6b; padding: 3px 9px; border-radius: 20px;
+    font-size: 11px; font-weight: bold; white-space: nowrap;
+}
+.close-account-btn {
+    background: rgba(231,76,60,0.12);
+    border: 1px solid rgba(231,76,60,0.45);
+    color: #ff6b6b; padding: 5px 10px; border-radius: 6px;
+    cursor: pointer; font-size: 11px; font-weight: 600;
+    transition: 0.2s; display: inline-flex; align-items: center; gap: 4px;
+    text-decoration: none;
+}
+.close-account-btn:hover {
+    background: rgba(231,76,60,0.3); border-color: #e74c3c; transform: scale(1.04);
+}
+
+
+/* ── PAGINATION ── */
+.pagination-bar {
+    max-width: 1100px;
+    margin: 0 auto 12px auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+.pagination-info { font-size: 13px; opacity: 0.75; }
+.pagination-controls { display: flex; align-items: center; gap: 8px; }
+.page-btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 7px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.25s;
+}
+.page-btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none !important; }
+.page-btn.nav-btn {
+    background: rgba(255,255,255,0.12);
+    color: rgba(255,255,255,0.9);
+    border: 1px solid rgba(255,255,255,0.2);
+}
+.page-btn.nav-btn:not(:disabled):hover { background: rgba(255,255,255,0.22); transform: translateY(-2px); }
+.page-btn.full-btn {
+    background: linear-gradient(90deg, #00c6ff, #0072ff);
+    color: white;
+    border: 1px solid rgba(0,198,255,0.4);
+    box-shadow: 0 4px 12px rgba(0,114,255,0.3);
+}
+.page-btn.full-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,198,255,0.5); }
+.page-counter {
+    font-size: 13px;
+    font-weight: 600;
+    color: #00e0ff;
+    min-width: 80px;
+    text-align: center;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="top-nav">
+    <a href="/report" class="btn-report">⬅ Reports</a>
+    <a href="/dashboard" class="btn-dashboard">🏠 Dashboard</a>
+</div>
+
+<!-- DELETE CONFIRM MODAL -->
+<div class="modal-overlay" id="deleteModal">
+    <div class="modal-box">
+        <div class="modal-icon">🗑️</div>
+        <h3>Delete Customer?</h3>
+        <p>This will permanently remove the customer along with all their transactions and loan records from the database.</p>
+        <div class="modal-info">
+            <span>Customer details</span>
+            <strong id="modalCustInfo">—</strong>
+        </div>
+        <div class="pwd-wrap">
+            <input type="password" id="adminPwd" placeholder="Enter admin password" autocomplete="off">
+            <span class="pwd-toggle" onclick="togglePwd()"><i class="fa fa-eye" id="eyeIcon"></i></span>
+        </div>
+        <div class="pwd-error" id="pwdError">⚠ Incorrect password. Please try again.</div>
+        <div class="divider"></div>
+        <div class="modal-btns">
+            <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+            <button class="btn-confirm-del" id="confirmDelBtn" onclick="confirmDelete()">
+                <i class="fa fa-trash"></i> Delete
+            </button>
+        </div>
+    </div>
+</div>
+<!-- EDIT MODAL -->
+<div class="modal-overlay" id="editModal">
+    <div class="edit-modal-box">
+        <div class="modal-icon" style="background:rgba(0,198,255,0.12);border-color:rgba(0,198,255,0.4);">✏️</div>
+        <h3>Edit Customer</h3>
+        <input type="hidden" id="editCustId">
+        <div class="edit-field">
+            <label>Full Name</label>
+            <input type="text" id="editName" placeholder="Customer name">
+        </div>
+        <div class="edit-field">
+            <label>Mobile</label>
+            <input type="text" id="editMobile" placeholder="Mobile number">
+        </div>
+        <div class="edit-field">
+            <label>Address</label>
+            <input type="text" id="editAddress" placeholder="Address">
+        </div>
+        <div class="edit-field">
+            <label>Admin Password</label>
+            <div class="pwd-wrap" style="margin-bottom:0;">
+                <input type="password" id="editPwd" placeholder="Enter admin password" autocomplete="off">
+                <span class="pwd-toggle" onclick="toggleEditPwd()"><i class="fa fa-eye" id="editEyeIcon"></i></span>
+            </div>
+        </div>
+        <div class="pwd-error" id="editPwdError"></div>
+        <div class="divider" style="margin-top:16px;"></div>
+        <div class="modal-btns">
+            <button class="btn-cancel" onclick="closeEditModal()">Cancel</button>
+            <button class="btn-confirm-edit" id="confirmEditBtn" onclick="confirmEdit()">
+                <i class="fa fa-save"></i> Save
+            </button>
+        </div>
+    </div>
+</div>
+<!-- TOAST -->
+<div class="toast" id="toast">✅ Customer deleted successfully!</div>
+
+<h1><i class="fa fa-users"></i> Customer List</h1>
+
+<!-- Summary -->
+<div class="summary">
+    <div class="card">
+        <div class="val">{{ customers | length }}</div>
+        <div class="lbl">Total Customers</div>
+    </div>
+</div>
+
+<!-- Search -->
+<div class="search-box">
+    <input type="text" id="searchInput"
+           placeholder="🔍 Search Account / Name / Mobile"
+           onkeyup="filterTable()">
+</div>
+
+<!-- Table -->
+
+<div class="pagination-bar" id="paginationBar" style="display:none;">
+    <div class="pagination-info" id="pageInfo">Showing rows…</div>
+    <div class="pagination-controls">
+        <button class="page-btn nav-btn" id="prevBtn" onclick="changePage('customerTable',-1)" disabled>◀ Prev</button>
+        <span class="page-counter" id="pageCounter">1 / 1</span>
+        <button class="page-btn nav-btn" id="nextBtn" onclick="changePage('customerTable',1)">Next ▶</button>
+        <button class="page-btn full-btn" id="fullReportBtn" onclick="toggleFullReport('customerTable')">📋 Full Report</button>
+    </div>
+</div>
+<div class="table-wrap">
+<table id="customerTable">
+    <thead>
+        <tr>
+            <th>#</th>
+            <th></th>
+            <th>Account</th>
+            <th>Name</th>
+            <th>Mobile</th>
+            <th>Address</th>
+            <th>Created</th>
+            <th>Action</th>
+        </tr>
+    </thead>
+
+    <tbody>
+        {% for cust in customers %}
+        <tr id="row-{{ cust.id }}" {% if cust.is_closed %}class="closed-row"{% endif %}>
+            <td>{{ loop.index }}</td>
+
+            <td>
+                <div class="avatar" {% if cust.is_closed %}style="background:linear-gradient(90deg,#555,#333);"{% endif %}>
+                    {{ cust.name[0].upper() }}
+                </div>
+            </td>
+
+            <td>
+                {{ cust.account_number }}
+                {% if cust.is_closed %}
+                <div style="margin-top:3px;"><span class="closed-badge">🔒 Closed</span></div>
+                {% endif %}
+            </td>
+            <td>{{ cust.name }}</td>
+            <td>{{ cust.mobile }}</td>
+            <td>{{ cust.address }}</td>
+            <td>
+                {{ cust.created[:10] }}
+                {% if cust.is_closed %}
+                <div style="font-size:11px;color:#ff6b6b;margin-top:2px;">Closed: {{ cust.closed_date[:10] if cust.closed_date else 'N/A' }}</div>
+                {% endif %}
+            </td>
+
+            <td style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+                {% if not cust.is_closed %}
+                <button class="edit-btn"
+                    onclick="openEditModal({{ cust.id }}, '{{ cust.name }}', '{{ cust.mobile }}', '{{ cust.address or '' }}')">
+                    <i class="fa fa-pen"></i> Edit
+                </button>
+                {% if loop.first %}
+                <button class="delete-btn"
+                    onclick="openDeleteModal({{ cust.id }}, '{{ cust.account_number }}', '{{ cust.name }}')">
+                    <i class="fa fa-trash"></i> Delete
+                </button>
+                {% endif %}
+                <a class="close-account-btn" href="/close_account/{{ cust.id }}">
+                    <i class="fa fa-lock"></i> Close Acc
+                </a>
+                {% else %}
+                <a href="/customer_report?q={{ cust.account_number }}"
+                   style="font-size:12px;color:#00e0ff;text-decoration:none;opacity:0.8;">
+                    <i class="fa fa-file-alt"></i> View Report
+                </a>
+                {% endif %}
+            </td>
+
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+
+
+<div class="pagination-bar" id="paginationBarBottom" style="display:none;">
+    <div class="pagination-info" id="pageInfoBottom">Showing rows…</div>
+    <div class="pagination-controls">
+        <button class="page-btn nav-btn" id="prevBtnBottom" onclick="changePage('customerTable',-1)" disabled>◀ Prev</button>
+        <span class="page-counter" id="pageCounterBottom">1 / 1</span>
+        <button class="page-btn nav-btn" id="nextBtnBottom" onclick="changePage('customerTable',1)">Next ▶</button>
+        <button class="page-btn full-btn" id="fullReportBtnBottom" onclick="toggleFullReport('customerTable')">📋 Full Report</button>
+    </div>
+</div>
+<div class="nav">
+    <a href="/dashboard">⬅ Back to Dashboard</a>
+</div>
+
+<script>
+var pendingDeleteId = null;
+
+function openDeleteModal(custId, accNo, name) {
+    pendingDeleteId = custId;
+    document.getElementById('modalCustInfo').textContent = accNo + ' · ' + name;
+    document.getElementById('adminPwd').value = '';
+    document.getElementById('pwdError').style.display = 'none';
+    document.getElementById('deleteModal').classList.add('show');
+    setTimeout(function(){ document.getElementById('adminPwd').focus(); }, 200);
+}
+
+function closeModal() {
+    document.getElementById('deleteModal').classList.remove('show');
+    pendingDeleteId = null;
+}
+
+function togglePwd() {
+    var inp = document.getElementById('adminPwd');
+    var ico = document.getElementById('eyeIcon');
+    if (inp.type === 'password') {
+        inp.type = 'text';
+        ico.className = 'fa fa-eye-slash';
+    } else {
+        inp.type = 'password';
+        ico.className = 'fa fa-eye';
+    }
+}
+
+function confirmDelete() {
+    var pwd = document.getElementById('adminPwd').value;
+    if (!pwd) {
+        document.getElementById('pwdError').textContent = '⚠ Please enter the admin password.';
+        document.getElementById('pwdError').style.display = 'block';
+        return;
+    }
+    var btn = document.getElementById('confirmDelBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Deleting...';
+
+    fetch('/api/delete-customer', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: pendingDeleteId, password: pwd })
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(data) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa fa-trash"></i> Delete';
+		if (data.success) {
+			closeModal();
+			showToast('✅ Customer deleted successfully!');
+			
+			setTimeout(function () {
+				location.reload();  // 🔥 refresh page
+			}, 800);
+        } else {
+            document.getElementById('pwdError').textContent = '⚠ ' + (data.message || 'Incorrect password.');
+            document.getElementById('pwdError').style.display = 'block';
+        }
+    })
+    .catch(function() {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa fa-trash"></i> Delete';
+        document.getElementById('pwdError').textContent = '⚠ Server error. Please try again.';
+        document.getElementById('pwdError').style.display = 'block';
+    });
+}
+
+function showToast(msg) {
+    var t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(function(){ t.classList.remove('show'); }, 3000);
+}
+
+document.getElementById('deleteModal').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+});
+
+document.getElementById('adminPwd').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') confirmDelete();
+});
+
+function filterTable() {
+    var input = document.getElementById("searchInput");
+    var filter = input.value.toLowerCase();
+    var rows = document.querySelectorAll("#customerTable tbody tr");
+    rows.forEach(row => {
+        let text = row.innerText.toLowerCase();
+        row.style.display = text.includes(filter) ? "" : "none";
+    });
+}
+var pendingEditId = null;
+
+function openEditModal(id, name, mobile, address) {
+    pendingEditId = id;
+    document.getElementById('editCustId').value = id;
+    document.getElementById('editName').value = name;
+    document.getElementById('editMobile').value = mobile;
+    document.getElementById('editAddress').value = address;
+    document.getElementById('editPwd').value = '';
+    document.getElementById('editPwdError').style.display = 'none';
+    document.getElementById('editModal').classList.add('show');
+    setTimeout(function(){ document.getElementById('editName').focus(); }, 200);
+}
+
+function closeEditModal() {
+    document.getElementById('editModal').classList.remove('show');
+    pendingEditId = null;
+}
+
+function toggleEditPwd() {
+    var inp = document.getElementById('editPwd');
+    var ico = document.getElementById('editEyeIcon');
+    if (inp.type === 'password') {
+        inp.type = 'text';
+        ico.className = 'fa fa-eye-slash';
+    } else {
+        inp.type = 'password';
+        ico.className = 'fa fa-eye';
+    }
+}
+
+function confirmEdit() {
+    var pwd = document.getElementById('editPwd').value;
+    if (!pwd) {
+        document.getElementById('editPwdError').textContent = '⚠ Please enter the admin password.';
+        document.getElementById('editPwdError').style.display = 'block';
+        return;
+    }
+    var btn = document.getElementById('confirmEditBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Saving...';
+
+    fetch('/api/edit-customer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            id: pendingEditId,
+            name: document.getElementById('editName').value.trim(),
+            mobile: document.getElementById('editMobile').value.trim(),
+            address: document.getElementById('editAddress').value.trim(),
+            password: pwd
+        })
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(data) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa fa-save"></i> Save';
+        if (data.success) {
+            closeEditModal();
+            showToast('✅ Customer updated successfully!');
+            setTimeout(function(){ location.reload(); }, 800);
+        } else {
+            document.getElementById('editPwdError').textContent = '⚠ ' + (data.message || 'Failed to update.');
+            document.getElementById('editPwdError').style.display = 'block';
+        }
+    })
+    .catch(function() {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa fa-save"></i> Save';
+        document.getElementById('editPwdError').textContent = '⚠ Server error. Please try again.';
+        document.getElementById('editPwdError').style.display = 'block';
+    });
+}
+
+document.getElementById('editModal').addEventListener('click', function(e) {
+    if (e.target === this) closeEditModal();
+});
+</script>
+
+
+<script>
+(function(){
+    var ROWS_PER_PAGE = 25;
+    var state = {
+        tableId:     'customerTable',
+        currentPage: 1,
+        isFull:      false,
+        allRows:     [],
+        filteredRows:[]
+    };
+
+    function getRows() {
+        var tbody = document.querySelector('#' + state.tableId + ' tbody');
+        if (!tbody) return [];
+        return Array.from(tbody.querySelectorAll('tr'));
+    }
+
+    function totalPages() {
+        return Math.max(1, Math.ceil(state.filteredRows.length / ROWS_PER_PAGE));
+    }
+
+    function syncBar(suffix) {
+        var total  = state.filteredRows.length;
+        var tp     = totalPages();
+        var start  = (state.currentPage - 1) * ROWS_PER_PAGE + 1;
+        var end    = Math.min(state.currentPage * ROWS_PER_PAGE, total);
+        var infoTx = state.isFull
+            ? 'Showing all ' + total + ' rows'
+            : (total === 0 ? 'No rows' : 'Showing ' + start + '\u2013' + end + ' of ' + total + ' rows');
+        var ctrTx  = state.isFull ? '\u2014' : (state.currentPage + ' / ' + tp);
+
+        var pi = document.getElementById('pageInfo'    + suffix);
+        var pc = document.getElementById('pageCounter' + suffix);
+        var pb = document.getElementById('prevBtn'     + suffix);
+        var nb = document.getElementById('nextBtn'     + suffix);
+        if (pi) pi.textContent = infoTx;
+        if (pc) pc.textContent = ctrTx;
+        if (pb) pb.disabled = state.isFull || state.currentPage === 1;
+        if (nb) nb.disabled = state.isFull || state.currentPage >= tp;
+    }
+
+    function renderPage() {
+        var start = (state.currentPage - 1) * ROWS_PER_PAGE;
+        var end   = start + ROWS_PER_PAGE;
+        state.allRows.forEach(function(r) { r.style.display = 'none'; });
+        state.filteredRows.forEach(function(r, i) {
+            r.style.display = (state.isFull || (i >= start && i < end)) ? '' : 'none';
+        });
+        syncBar('');
+        syncBar('Bottom');
+    }
+
+    window.changePage = function(tblId, delta) {
+        if (tblId !== state.tableId) return;
+        var np = state.currentPage + delta;
+        if (np < 1 || np > totalPages()) return;
+        state.currentPage = np;
+        renderPage();
+        var tbl = document.getElementById(state.tableId);
+        if (tbl) tbl.scrollIntoView({behavior:'smooth', block:'start'});
+    };
+
+    function applyFullStyle(suffix, full) {
+        var btn = document.getElementById('fullReportBtn' + suffix);
+        if (!btn) return;
+        if (full) {
+            btn.textContent = '\uD83D\uDCC4 Paginate';
+            btn.style.background = 'linear-gradient(90deg,#f7971e,#ffd200)';
+            btn.style.color = '#111';
+        } else {
+            btn.textContent = '\uD83D\uDCCB Full Report';
+            btn.style.background = 'linear-gradient(90deg,#00c6ff,#0072ff)';
+            btn.style.color = 'white';
+        }
+    }
+
+    window.toggleFullReport = function(tblId) {
+        if (tblId !== state.tableId) return;
+        state.isFull = !state.isFull;
+        applyFullStyle('',       state.isFull);
+        applyFullStyle('Bottom', state.isFull);
+        renderPage();
+    };
+
+    /* hook existing filterTable if present */
+    var origFilter = window.filterTable;
+    window.filterTable = function() {
+        if (origFilter) origFilter();
+        /* re-build filteredRows from visible rows */
+        state.filteredRows = state.allRows.filter(function(r) {
+            return r.style.display !== 'none';
+        });
+        state.currentPage = 1;
+        state.isFull = false;
+        applyFullStyle('',       false);
+        applyFullStyle('Bottom', false);
+        renderPage();
+    };
+
+    function init() {
+        state.allRows      = getRows();
+        state.filteredRows = state.allRows.slice();
+        if (state.allRows.length > ROWS_PER_PAGE) {
+            var pb = document.getElementById('paginationBar');
+            var pbb = document.getElementById('paginationBarBottom');
+            if (pb)  pb.style.display  = 'flex';
+            if (pbb) pbb.style.display = 'flex';
+        }
+        renderPage();
+    }
+
+    if (document.readyState !== 'loading') init();
+    else document.addEventListener('DOMContentLoaded', init);
+})();
+</script>
+
+</body>
+</html>

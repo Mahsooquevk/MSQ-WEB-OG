@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Service Charge Report</title>
+<link href="/static/fontawesome/css/all.min.css" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+    min-height: 100vh;
+    color: white;
+    padding: 30px 20px 80px;
+}
+
+h1 {
+    text-align: center;
+    font-size: 26px;
+    margin-bottom: 25px;
+    color: #00e0ff;
+    letter-spacing: 1px;
+}
+
+/* ---- Top Nav ---- */
+.top-nav {
+    position: fixed;
+    top: 18px;
+    right: 22px;
+    display: flex;
+    gap: 10px;
+    z-index: 1000;
+}
+.top-nav a {
+    text-decoration: none;
+    padding: 9px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    transition: 0.25s;
+    white-space: nowrap;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.35);
+}
+.btn-reports {
+    background: rgba(255,255,255,0.12);
+    color: rgba(255,255,255,0.9);
+    border: 1px solid rgba(255,255,255,0.22);
+}
+.btn-reports:hover { background: rgba(255,255,255,0.2); transform: translateY(-2px); }
+.btn-add {
+    background: linear-gradient(90deg, #e74c3c, #c0392b);
+    color: white;
+    border: 1px solid rgba(231,76,60,0.4);
+}
+.btn-add:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(231,76,60,0.5); }
+.btn-dashboard {
+    background: linear-gradient(90deg, #00c6ff, #0072ff);
+    color: white;
+    border: 1px solid rgba(0,198,255,0.4);
+}
+.btn-dashboard:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,198,255,0.5); }
+
+/* ---- Summary Cards ---- */
+.cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 15px;
+    margin: 0 auto 28px auto;
+    max-width: 1100px;
+}
+.card {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+}
+.card .icon  { font-size: 22px; margin-bottom: 8px; }
+.card .value { font-size: 21px; font-weight: bold; margin: 5px 0; }
+.card .label { font-size: 11px; opacity: 0.7; text-transform: uppercase; letter-spacing: 1px; }
+.card.green  { border-color: rgba(46,204,113,0.4); }
+.card.green .icon, .card.green .value { color: #2ecc71; }
+.card.red    { border-color: rgba(231,76,60,0.4); }
+.card.red .icon,  .card.red .value   { color: #e74c3c; }
+.card.blue   { border-color: rgba(0,224,255,0.4); }
+.card.blue .icon, .card.blue .value  { color: #00e0ff; }
+
+/* ---- Legend ---- */
+.legend {
+    max-width: 1100px;
+    margin: 0 auto 12px auto;
+    display: flex;
+    align-items: center;
+    gap: 22px;
+    flex-wrap: wrap;
+}
+.legend-item { display: flex; align-items: center; gap: 7px; font-size: 12px; opacity: 0.8; }
+.legend-dot { width: 12px; height: 12px; border-radius: 3px; }
+.dot-income  { background: rgba(46,204,113,0.5);  border: 1px solid #2ecc71; }
+.dot-expense { background: rgba(231,76,60,0.4);   border: 1px solid #e74c3c; }
+
+/* ---- Section Title ---- */
+.section-title {
+    max-width: 1100px;
+    margin: 12px auto 10px auto;
+    font-size: 15px;
+    font-weight: bold;
+    color: #00e0ff;
+}
+
+/* ---- Table ---- */
+.table-wrap {
+    max-width: 1100px;
+    margin: 0 auto 30px auto;
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+}
+table { width: 100%; border-collapse: collapse; background: rgba(255,255,255,0.05); }
+
+thead tr {
+    background: linear-gradient(90deg, #0f4f7a, #0a3555);
+    border-bottom: 2px solid rgba(0,224,255,0.25);
+}
+th {
+    padding: 13px 13px;
+    text-align: left;
+    font-size: 12px;
+    color: rgba(255,255,255,0.8);
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    font-weight: 600;
+}
+
+/* Colour-coded rows */
+tr.row-income  { background: rgba(46,204,113,0.07); border-left: 3px solid #2ecc71; }
+tr.row-income:hover  { background: rgba(46,204,113,0.14); }
+tr.row-expense { background: rgba(231,76,60,0.07);  border-left: 3px solid #e74c3c; }
+tr.row-expense:hover { background: rgba(231,76,60,0.13); }
+
+td {
+    padding: 11px 13px;
+    font-size: 13px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    vertical-align: middle;
+}
+
+/* Badges */
+.badge { padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: bold; white-space: nowrap; }
+.badge-income  { background: rgba(46,204,113,0.18); color: #2ecc71; border: 1px solid #2ecc71; }
+.badge-expense { background: rgba(231,76,60,0.18);  color: #ff6b6b; border: 1px solid #ff6b6b; }
+
+/* Amounts */
+.amt-credit { color: #2ecc71; font-weight: bold; }
+.amt-debit  { color: #e74c3c; font-weight: bold; }
+.amt-dash   { opacity: 0.3; }
+
+/* Remark cell */
+.remark-text { font-style: italic; font-size: 12px; line-height: 1.4; }
+.remark-text.has-remark { color: #ffd97d; opacity: 0.9; }
+.remark-text.no-remark  { opacity: 0.3; }
+
+/* Action cell */
+.action-cell { display: flex; align-items: center; gap: 6px; }
+
+/* Delete button */
+.btn-delete {
+    background: none;
+    border: 1px solid rgba(231,76,60,0.45);
+    border-radius: 6px;
+    color: rgba(255,100,100,0.7);
+    padding: 4px 9px;
+    font-size: 11px;
+    cursor: pointer;
+    transition: 0.2s;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.btn-delete:hover {
+    border-color: #e74c3c;
+    color: #ff6b6b;
+    background: rgba(231,76,60,0.12);
+}
+
+/* Empty state */
+.empty-row td { padding: 35px; text-align: center; opacity: 0.45; font-size: 14px; border-left: none !important; }
+
+/* Grand total footer */
+tfoot tr td {
+    padding: 14px 13px;
+    font-weight: bold;
+    font-size: 13px;
+    background: rgba(0,0,0,0.35);
+    border-top: 2px solid rgba(255,255,255,0.15);
+}
+.total-label { color: #00e0ff; }
+.total-green { color: #2ecc71; }
+.total-red   { color: #e74c3c; }
+.total-blue  { color: #00e0ff; }
+
+/* Flash message */
+.flash {
+    max-width: 1100px;
+    margin: 0 auto 18px auto;
+    padding: 12px 18px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.flash.success { background: rgba(46,204,113,0.18); border: 1px solid #2ecc71; color: #2ecc71; }
+.flash.error   { background: rgba(231,76,60,0.18);  border: 1px solid #e74c3c; color: #ff6b6b; }
+
+/* ---- Delete Confirm Modal ---- */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.65);
+    z-index: 2000;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+}
+.modal-overlay.active { display: flex; }
+.modal-box {
+    background: linear-gradient(145deg, #1a3a4a, #0f2a38);
+    border: 1px solid rgba(231,76,60,0.35);
+    border-radius: 16px;
+    padding: 32px 28px 24px;
+    width: 100%;
+    max-width: 380px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.7);
+    animation: slideUp 0.22s ease;
+    text-align: center;
+}
+@keyframes slideUp {
+    from { transform: translateY(28px); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+}
+.modal-icon { font-size: 38px; margin-bottom: 14px; }
+.modal-box h3 { color: #ff6b6b; font-size: 17px; margin-bottom: 8px; }
+.modal-box p  { font-size: 13px; opacity: 0.65; margin-bottom: 22px; line-height: 1.6; }
+.modal-detail {
+    background: rgba(255,255,255,0.06);
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-bottom: 22px;
+    font-size: 13px;
+    text-align: left;
+    line-height: 1.8;
+    border: 1px solid rgba(255,255,255,0.08);
+}
+.modal-detail span { color: #00e0ff; font-weight: bold; }
+.modal-actions { display: flex; gap: 10px; justify-content: center; }
+.btn-cancel {
+    padding: 10px 22px; border-radius: 8px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: white; font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: 0.2s;
+}
+.btn-cancel:hover { background: rgba(255,255,255,0.15); }
+.btn-confirm-delete {
+    padding: 10px 22px; border-radius: 8px;
+    background: linear-gradient(90deg, #e74c3c, #c0392b);
+    border: none; color: white;
+    font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: 0.2s;
+}
+.btn-confirm-delete:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(231,76,60,0.5); }
+
+@media (max-width: 700px) {
+    .top-nav { top: 10px; right: 10px; gap: 6px; }
+    .top-nav a { padding: 7px 10px; font-size: 11px; }
+    th, td   { padding: 9px 8px; font-size: 11px; }
+    h1       { font-size: 20px; margin-top: 18px; }
+    .cards   { grid-template-columns: 1fr 1fr; }
+}
+
+/* ── PAGINATION ── */
+.pagination-bar {
+    max-width: 1100px;
+    margin: 0 auto 12px auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+.pagination-info { font-size: 13px; opacity: 0.75; }
+.pagination-controls { display: flex; align-items: center; gap: 8px; }
+.page-btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 7px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.25s;
+}
+.page-btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none !important; }
+.page-btn.nav-btn {
+    background: rgba(255,255,255,0.12);
+    color: rgba(255,255,255,0.9);
+    border: 1px solid rgba(255,255,255,0.2);
+}
+.page-btn.nav-btn:not(:disabled):hover { background: rgba(255,255,255,0.22); transform: translateY(-2px); }
+.page-btn.full-btn {
+    background: linear-gradient(90deg, #00c6ff, #0072ff);
+    color: white;
+    border: 1px solid rgba(0,198,255,0.4);
+    box-shadow: 0 4px 12px rgba(0,114,255,0.3);
+}
+.page-btn.full-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,198,255,0.5); }
+.page-counter {
+    font-size: 13px;
+    font-weight: 600;
+    color: #00e0ff;
+    min-width: 80px;
+    text-align: center;
+}
+
+</style>
+</head>
+<body>
+
+<!-- Top Nav -->
+<div class="top-nav">
+    <a href="/report" class="btn-reports"><i class="fa fa-arrow-left"></i> Reports</a>
+    <a href="/dashboard" class="btn-dashboard"><i class="fa fa-home"></i> Dashboard</a>
+</div>
+
+<h1><i class="fa fa-file-invoice"></i> Service Charge Report</h1>
+
+<!-- Flash messages -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    {% for category, message in messages %}
+    <div class="flash {{ category }}">
+        <i class="fa fa-{% if category == 'success' %}check-circle{% else %}exclamation-circle{% endif %}"></i>
+        {{ message }}
+    </div>
+    {% endfor %}
+  {% endif %}
+{% endwith %}
+
+<!-- Summary Cards -->
+<div class="cards">
+    <div class="card green">
+        <div class="icon">💰</div>
+        <div class="value">₹{{ total_collected }}</div>
+        <div class="label">Total Income</div>
+    </div>
+    <div class="card red">
+        <div class="icon">📤</div>
+        <div class="value">₹{{ total_spent }}</div>
+        <div class="label">Total Expense</div>
+    </div>
+    <div class="card blue">
+        <div class="icon">⚖️</div>
+        <div class="value">₹{{ service_balance }}</div>
+        <div class="label">Balance</div>
+    </div>
+</div>
+
+<!-- Legend -->
+<div class="legend">
+    <span style="font-size:11px;opacity:0.4;text-transform:uppercase;letter-spacing:1px;">Legend</span>
+    <div class="legend-item"><div class="legend-dot dot-income"></div> Income (Credit)</div>
+    <div class="legend-item"><div class="legend-dot dot-expense"></div> Expense (Debit)</div>
+</div>
+
+<!-- Unified Ledger Table -->
+<div class="section-title"><i class="fa fa-table"></i> All Transactions (Latest First)</div>
+
+<div class="pagination-bar" id="paginationBar" style="display:none;">
+    <div class="pagination-info" id="pageInfo">Showing rows…</div>
+    <div class="pagination-controls">
+        <button class="page-btn nav-btn" id="prevBtn" onclick="changePage('serviceTable',-1)" disabled>◀ Prev</button>
+        <span class="page-counter" id="pageCounter">1 / 1</span>
+        <button class="page-btn nav-btn" id="nextBtn" onclick="changePage('serviceTable',1)">Next ▶</button>
+        <button class="page-btn full-btn" id="fullReportBtn" onclick="toggleFullReport('serviceTable')">📋 Full Report</button>
+    </div>
+</div>
+<div class="table-wrap">
+    <table id="serviceTable">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Date &amp; Time</th>
+                <th>Description</th>
+                <th>Type</th>
+                <th>Credit (₹)</th>
+                <th>Debit (₹)</th>
+                <th>Remark</th>
+                <th style="text-align:center;">Action</th>
+            </tr>
+        </thead>
+        <tbody>
+
+        {#
+          Build a unified list of all transactions sorted by date descending.
+          Each entry: { date, description, type (income/expense), credit, debit, remark, deletable (bool), delete_id }
+        #}
+
+        {% set all_rows = [] %}
+
+        {# -- Account Opening income rows -- #}
+        {% for row in collections %}
+            {% set _ = all_rows.append({
+                'date':         row.date,
+                'description':  row.name ~ ' (' ~ row.account_number ~ ')',
+                'type':         'income',
+                'credit':       row.amount,
+                'debit':        0,
+                'remark':       'Account Opening',
+                'deletable':    true,
+                'delete_id':    row.id,
+                'delete_table': 'opening'
+            }) %}
+        {% endfor %}
+
+		{# -- Loan service charge income rows -- #}
+        {% for row in loan_charges %}
+            {% set _ = all_rows.append({
+                'date':         row.date,
+                'description':  row.name ~ ' (' ~ row.account_number ~ ')',
+                'type':         'income',
+                'credit':       row.service_charge,
+                'debit':        0,
+                'remark':       'Loan Service Charge',
+                'deletable':    false,
+                'delete_id':    none,
+                'delete_table': ''
+            }) %}
+        {% endfor %}
+
+        {# -- Account opening / annual service charges from transactions table -- #}
+        {% for row in annual_charges %}
+            {% set _ = all_rows.append({
+                'date':         row.date,
+                'description':  row.name ~ ' (' ~ row.account_number ~ ')',
+                'type':         'income',
+                'credit':       row.amount,
+                'debit':        0,
+                'remark':       'Account Opening Service Charge',
+                'deletable':    false,
+                'delete_id':    none,
+                'delete_table': ''
+            }) %}
+        {% endfor %}
+
+        {# -- Expense (debit) rows -- #}
+        {% for e in expenses %}
+            {% set _ = all_rows.append({
+                'date':         e.date,
+                'description':  e.description,
+                'type':         'expense',
+                'credit':       0,
+                'debit':        e.amount,
+                'remark':       e.description,
+                'deletable':    true,
+                'delete_id':    e.id,
+                'delete_table': 'expense'
+            }) %}
+        {% endfor %}
+
+        {# Sort all_rows by date descending using sort filter #}
+        {% set sorted_rows = all_rows | sort(attribute='date', reverse=true) %}
+
+        {% if sorted_rows %}
+            {% for row in sorted_rows %}
+            <tr class="row-{{ row.type }}" id="row-{{ row.delete_id if row.deletable else 'nc-' ~ loop.index }}">
+                <td>{{ loop.index }}</td>
+                <td>{{ row.date[:16] }}</td>
+                <td>{{ row.description }}</td>
+                <td>
+                    {% if row.type == 'income' %}
+                        <span class="badge badge-income"><i class="fa fa-arrow-down"></i> Income</span>
+                    {% else %}
+                        <span class="badge badge-expense"><i class="fa fa-arrow-up"></i> Expense</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if row.credit > 0 %}
+                        <span class="amt-credit">₹{{ row.credit }}</span>
+                    {% else %}
+                        <span class="amt-dash">—</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if row.debit > 0 %}
+                        <span class="amt-debit">₹{{ row.debit }}</span>
+                    {% else %}
+                        <span class="amt-dash">—</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <span class="remark-text {% if row.remark %}has-remark{% else %}no-remark{% endif %}">
+                        {{ row.remark if row.remark else '—' }}
+                    </span>
+                </td>
+                <td style="text-align:center;">
+                    {% if row.deletable and loop.first %}
+                    <div class="action-cell" style="justify-content:center;">
+                        <button class="btn-delete"
+                            onclick="confirmDelete({{ row.delete_id }}, '{{ row.description | replace("'","&#39;") }}', '{{ row.credit if row.credit > 0 else row.debit }}', '{{ row.delete_table }}')">
+                            <i class="fa fa-trash"></i> Delete
+                        </button>
+                    </div>
+                    {% else %}
+                        <span style="opacity:0.2;font-size:11px;">—</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        {% else %}
+        <tr class="empty-row">
+            <td colspan="8">📭 No service charge transactions found.</td>
+        </tr>
+        {% endif %}
+
+        </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="3" class="total-label">Grand Total</td>
+                <td style="font-size:11px;opacity:0.45;">All entries</td>
+                <td class="total-green">₹{{ total_collected }}</td>
+                <td class="total-red">₹{{ total_spent }}</td>
+                <td colspan="2" class="total-blue">Balance: ₹{{ service_balance }}</td>
+            </tr>
+        </tfoot>
+    </table>
+</div>
+
+<!-- ══ Delete Confirm Modal ══ -->
+<div class="modal-overlay" id="deleteModal">
+    <div class="modal-box">
+        <div class="modal-icon">🗑️</div>
+        <h3 id="modal-title">Delete Record?</h3>
+        <p>This will permanently remove the record from the database. This action cannot be undone.</p>
+        <div class="modal-detail" id="modal-detail">—</div>
+		<form method="POST" style="margin:0;" id="deleteForm">
+			<input type="hidden" name="record_id" id="modal-record-id">
+			<input type="password" name="admin_password" id="modal-password"
+				placeholder="Enter admin password"
+				required
+				style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);
+					   background:rgba(255,255,255,0.07);color:white;font-size:13px;outline:none;
+					   margin-bottom:16px;font-family:inherit;"
+				autocomplete="off">
+			<div class="modal-actions">
+				<button type="button" class="btn-cancel" onclick="closeModal()">
+					<i class="fa fa-xmark"></i> Cancel
+				</button>
+				<button type="submit" class="btn-confirm-delete">
+					<i class="fa fa-trash"></i> Yes, Delete
+				</button>
+			</div>
+		</form>
+    </div>
+</div>
+
+
+<div class="pagination-bar" id="paginationBarBottom" style="display:none;">
+    <div class="pagination-info" id="pageInfoBottom">Showing rows…</div>
+    <div class="pagination-controls">
+        <button class="page-btn nav-btn" id="prevBtnBottom" onclick="changePage('serviceTable',-1)" disabled>◀ Prev</button>
+        <span class="page-counter" id="pageCounterBottom">1 / 1</span>
+        <button class="page-btn nav-btn" id="nextBtnBottom" onclick="changePage('serviceTable',1)">Next ▶</button>
+        <button class="page-btn full-btn" id="fullReportBtnBottom" onclick="toggleFullReport('serviceTable')">📋 Full Report</button>
+    </div>
+</div>
+<script>
+function confirmDelete(id, description, amount, tableType) {
+    document.getElementById('modal-record-id').value = id;
+    document.getElementById('modal-detail').innerHTML =
+        '<div>📄 <span>Description:</span> ' + description + '</div>' +
+        '<div>💸 <span>Amount:</span> ₹' + amount + '</div>';
+
+    if (tableType === 'opening') {
+        document.getElementById('deleteForm').action = '/delete_opening_charge';
+        document.getElementById('modal-title').textContent = 'Delete Account Opening Record?';
+    } else {
+        document.getElementById('deleteForm').action = '/delete_service_expense';
+        document.getElementById('modal-title').textContent = 'Delete Expense?';
+    }
+
+    document.getElementById('modal-password').value = '';
+	document.getElementById('deleteModal').classList.add('active');
+}
+function closeModal() {
+    document.getElementById('deleteModal').classList.remove('active');
+}
+document.getElementById('deleteModal').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+</script>
+
+
+<script>
+(function(){
+    var ROWS_PER_PAGE = 25;
+    var state = {
+        tableId:     'serviceTable',
+        currentPage: 1,
+        isFull:      false,
+        allRows:     [],
+        filteredRows:[]
+    };
+
+    function getRows() {
+        var tbody = document.querySelector('#' + state.tableId + ' tbody');
+        if (!tbody) return [];
+        return Array.from(tbody.querySelectorAll('tr'));
+    }
+
+    function totalPages() {
+        return Math.max(1, Math.ceil(state.filteredRows.length / ROWS_PER_PAGE));
+    }
+
+    function syncBar(suffix) {
+        var total  = state.filteredRows.length;
+        var tp     = totalPages();
+        var start  = (state.currentPage - 1) * ROWS_PER_PAGE + 1;
+        var end    = Math.min(state.currentPage * ROWS_PER_PAGE, total);
+        var infoTx = state.isFull
+            ? 'Showing all ' + total + ' rows'
+            : (total === 0 ? 'No rows' : 'Showing ' + start + '\u2013' + end + ' of ' + total + ' rows');
+        var ctrTx  = state.isFull ? '\u2014' : (state.currentPage + ' / ' + tp);
+
+        var pi = document.getElementById('pageInfo'    + suffix);
+        var pc = document.getElementById('pageCounter' + suffix);
+        var pb = document.getElementById('prevBtn'     + suffix);
+        var nb = document.getElementById('nextBtn'     + suffix);
+        if (pi) pi.textContent = infoTx;
+        if (pc) pc.textContent = ctrTx;
+        if (pb) pb.disabled = state.isFull || state.currentPage === 1;
+        if (nb) nb.disabled = state.isFull || state.currentPage >= tp;
+    }
+
+    function renderPage() {
+        var start = (state.currentPage - 1) * ROWS_PER_PAGE;
+        var end   = start + ROWS_PER_PAGE;
+        state.allRows.forEach(function(r) { r.style.display = 'none'; });
+        state.filteredRows.forEach(function(r, i) {
+            r.style.display = (state.isFull || (i >= start && i < end)) ? '' : 'none';
+        });
+        syncBar('');
+        syncBar('Bottom');
+    }
+
+    window.changePage = function(tblId, delta) {
+        if (tblId !== state.tableId) return;
+        var np = state.currentPage + delta;
+        if (np < 1 || np > totalPages()) return;
+        state.currentPage = np;
+        renderPage();
+        var tbl = document.getElementById(state.tableId);
+        if (tbl) tbl.scrollIntoView({behavior:'smooth', block:'start'});
+    };
+
+    function applyFullStyle(suffix, full) {
+        var btn = document.getElementById('fullReportBtn' + suffix);
+        if (!btn) return;
+        if (full) {
+            btn.textContent = '\uD83D\uDCC4 Paginate';
+            btn.style.background = 'linear-gradient(90deg,#f7971e,#ffd200)';
+            btn.style.color = '#111';
+        } else {
+            btn.textContent = '\uD83D\uDCCB Full Report';
+            btn.style.background = 'linear-gradient(90deg,#00c6ff,#0072ff)';
+            btn.style.color = 'white';
+        }
+    }
+
+    window.toggleFullReport = function(tblId) {
+        if (tblId !== state.tableId) return;
+        state.isFull = !state.isFull;
+        applyFullStyle('',       state.isFull);
+        applyFullStyle('Bottom', state.isFull);
+        renderPage();
+    };
+
+    /* hook existing filterTable if present */
+    var origFilter = window.filterTable;
+    window.filterTable = function() {
+        if (origFilter) origFilter();
+        /* re-build filteredRows from visible rows */
+        state.filteredRows = state.allRows.filter(function(r) {
+            return r.style.display !== 'none';
+        });
+        state.currentPage = 1;
+        state.isFull = false;
+        applyFullStyle('',       false);
+        applyFullStyle('Bottom', false);
+        renderPage();
+    };
+
+    function init() {
+        state.allRows      = getRows();
+        state.filteredRows = state.allRows.slice();
+        if (state.allRows.length > ROWS_PER_PAGE) {
+            var pb = document.getElementById('paginationBar');
+            var pbb = document.getElementById('paginationBarBottom');
+            if (pb)  pb.style.display  = 'flex';
+            if (pbb) pbb.style.display = 'flex';
+        }
+        renderPage();
+    }
+
+    if (document.readyState !== 'loading') init();
+    else document.addEventListener('DOMContentLoaded', init);
+})();
+</script>
+
+</body>
+</html>

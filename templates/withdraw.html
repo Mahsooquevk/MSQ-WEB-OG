@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Withdraw Money</title>
+
+<link rel="manifest" href="/static/manifest.json">
+<meta name="theme-color" content="#00c6ff">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="PF Bank">
+<link rel="apple-touch-icon" href="/static/icons/icon-192.png">
+<link href="/static/fontawesome/css/all.min.css" rel="stylesheet">
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/static/sw.js')
+        .then(reg => console.log('SW registered'))
+        .catch(err => console.log('SW error:', err));
+    });
+  }
+  let deferredPrompt;
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    const btn = document.getElementById('installBtn');
+    if (btn) btn.style.display = 'block';
+  });
+  function installApp() {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      deferredPrompt.userChoice.then(() => { deferredPrompt = null; });
+    }
+  }
+</script>
+
+<style>
+* { margin:0; padding:0; box-sizing:border-box; font-family:Arial, Helvetica, sans-serif; }
+
+body {
+  padding-top:80px;
+  padding-bottom:40px;
+  height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);
+  color:white;
+}
+
+.container {
+  width:450px;
+  padding:35px;
+  border-radius:15px;
+  background:rgba(255,255,255,0.1);
+  backdrop-filter:blur(12px);
+  box-shadow:0 0 25px rgba(0,0,0,0.4);
+}
+
+h2 { text-align:center; margin-bottom:25px; font-size:28px; }
+label { font-size:14px; opacity:0.9; }
+
+select, input {
+  width:100%;
+  padding:12px;
+  margin-top:6px;
+  border:none;
+  border-radius:8px;
+  outline:none;
+  font-size:14px;
+}
+
+.row { display:flex; align-items:center; gap:10px; margin-bottom:18px; }
+.col { flex:1; }
+.or { margin-top:25px; font-weight:bold; color:#00e0ff; }
+
+button {
+  width:100%;
+  padding:13px;
+  border:none;
+  border-radius:10px;
+  background:linear-gradient(90deg,#00c6ff,#0072ff);
+  color:white;
+  font-size:16px;
+  font-weight:bold;
+  cursor:pointer;
+  transition:0.3s;
+  margin-top:10px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+  letter-spacing:0.5px;
+  box-shadow:0 4px 20px rgba(0,114,255,0.4);
+}
+button:hover { transform:scale(1.04); box-shadow:0 6px 24px rgba(0,198,255,0.55); }
+
+.back { display:block; text-align:center; margin-top:18px; font-size:13px; }
+.back a { color:#00e0ff; text-decoration:none; }
+.back a:hover { text-decoration:underline; opacity:0.8; }
+
+/* ── SUCCESS POPUP ── */
+#successOverlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.65);
+  z-index: 9999;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+}
+#successOverlay.show { display: flex; }
+#successPopup {
+  background: linear-gradient(145deg,#0f2027,#1a3a4a,#2c5364);
+  border: 1px solid rgba(0,224,255,0.35);
+  border-radius: 20px;
+  padding: 44px 40px 36px;
+  text-align: center;
+  color: white;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.6), 0 0 40px rgba(0,180,255,0.15);
+  max-width: 360px;
+  width: 90%;
+  animation: popIn 0.35s cubic-bezier(0.34,1.56,0.64,1);
+}
+@keyframes popIn {
+  from { transform:scale(0.7); opacity:0; }
+  to   { transform:scale(1);   opacity:1; }
+}
+.popup-icon-wrap {
+  width: 76px; height: 76px;
+  border-radius: 50%;
+  background: rgba(0,255,160,0.12);
+  border: 2px solid rgba(0,255,160,0.45);
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 20px;
+  font-size: 34px;
+}
+#successPopup h3 { font-size:22px; font-weight:700; margin-bottom:10px; }
+#successPopup p  { font-size:14px; opacity:0.75; margin-bottom:28px; line-height:1.65; }
+.popup-divider   { height:1px; background:rgba(255,255,255,0.12); margin-bottom:24px; }
+#successPopup .ok-btn {
+  background: linear-gradient(90deg,#00c6ff,#0072ff);
+  color: white; font-size:15px; font-weight:bold;
+  border: none; border-radius:10px;
+  padding: 13px 0; width:100%;
+  cursor: pointer; transition:0.25s;
+  box-shadow: 0 4px 20px rgba(0,114,255,0.4);
+}
+#successPopup .ok-btn:hover { transform:scale(1.04); box-shadow:0 6px 24px rgba(0,198,255,0.55); }
+
+/* ── ERROR POPUP ── */
+#errorOverlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.65);
+  z-index: 9999;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+}
+#errorOverlay.show { display: flex; }
+#errorPopup {
+  background: linear-gradient(145deg,#1a0a0a,#2d0f0f,#3d1515);
+  border: 1px solid rgba(255,80,80,0.35);
+  border-radius: 20px;
+  padding: 44px 40px 36px;
+  text-align: center;
+  color: white;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.6), 0 0 40px rgba(255,80,80,0.15);
+  max-width: 360px;
+  width: 90%;
+  animation: popIn 0.35s cubic-bezier(0.34,1.56,0.64,1);
+}
+.error-icon-wrap {
+  width: 76px; height: 76px;
+  border-radius: 50%;
+  background: rgba(255,80,80,0.12);
+  border: 2px solid rgba(255,80,80,0.45);
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 20px;
+  font-size: 34px;
+}
+#errorPopup h3 { font-size:22px; font-weight:700; margin-bottom:10px; color:#ff6b6b; }
+#errorPopup p  { font-size:14px; opacity:0.75; margin-bottom:28px; line-height:1.65; }
+.error-divider   { height:1px; background:rgba(255,80,80,0.2); margin-bottom:24px; }
+#errorPopup .close-btn {
+  background: linear-gradient(90deg,#ff416c,#ff4b2b);
+  color: white; font-size:15px; font-weight:bold;
+  border: none; border-radius:10px;
+  padding: 13px 0; width:100%;
+  cursor: pointer; transition:0.25s;
+  box-shadow: 0 4px 20px rgba(255,65,108,0.4);
+}
+#errorPopup .close-btn:hover { transform:scale(1.04); box-shadow:0 6px 24px rgba(255,75,43,0.55); }
+
+/* ── SEARCHABLE DROPDOWNS ── */
+.dd-wrap { position: relative; }
+.dd-input-row {
+  display: flex; align-items: center;
+  background: rgba(255,255,255,0.95);
+  border-radius: 8px; position: relative; cursor: pointer;
+  margin-top: 6px;
+}
+.dd-input-row input {
+  flex:1; border:none; outline:none;
+  padding:12px 32px 12px 12px; font-size:14px;
+  background:transparent; color:#222;
+  margin-bottom:0; border-radius:8px; cursor:pointer;
+}
+.dd-arrow {
+  position:absolute; right:10px; top:50%;
+  transform:translateY(-50%); color:#888;
+  font-size:10px; pointer-events:none; transition:transform 0.2s;
+}
+.dd-arrow.open { transform:translateY(-50%) rotate(180deg); }
+.dd-list {
+  display:none; position:absolute; top:calc(100% + 4px);
+  left:0; right:0; background:#fff; border-radius:10px;
+  box-shadow:0 8px 28px rgba(0,0,0,0.25); max-height:200px;
+  overflow-y:auto; z-index:999; border:1px solid rgba(0,198,255,0.3);
+}
+.dd-list.open { display:block; animation:ddIn 0.15s ease; }
+@keyframes ddIn { from{opacity:0;transform:translateY(-5px)} to{opacity:1;transform:translateY(0)} }
+.dd-item {
+  padding:10px 14px; cursor:pointer; color:#222; font-size:14px;
+  border-bottom:1px solid #f0f0f0;
+}
+.dd-item:last-child { border-bottom:none; }
+.dd-item:hover { background:#e8f7ff; }
+.dd-empty { padding:12px; text-align:center; color:#aaa; font-size:13px; }
+
+/* ── INFO CARD ── */
+#infoCard {
+  border-radius: 12px;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(0,224,255,0.2);
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+#infoCard .card-header {
+  display: flex; align-items: center; gap:8px;
+  padding: 10px 16px;
+  background: rgba(0,224,255,0.08);
+  border-bottom: 1px solid rgba(0,224,255,0.15);
+  font-size: 12px; font-weight: bold;
+  letter-spacing: 0.5px; color: #00e0ff; text-transform: uppercase;
+}
+#infoCard .card-body {
+  display: grid; grid-template-columns: 1fr 1fr;
+}
+#infoCard .stat-item {
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  border-right: 1px solid rgba(255,255,255,0.06);
+}
+#infoCard .stat-item:nth-child(even) { border-right: none; }
+#infoCard .stat-item:nth-last-child(-n+2) { border-bottom: none; }
+#infoCard .stat-label { font-size:10px; opacity:0.5; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:3px; }
+#infoCard .stat-value { font-size:16px; font-weight:bold; color:#fff; }
+#infoCard .stat-value.green  { color:#00ffa3; }
+#infoCard .stat-value.orange { color:#ff9f43; }
+#infoCard .stat-value.red    { color:#ff6b6b; }
+@keyframes statPop {
+  from { transform:scale(0.85) translateY(4px); opacity:0; }
+  to   { transform:scale(1) translateY(0); opacity:1; }
+}
+#infoCard .stat-value.animate { animation: statPop 0.3s cubic-bezier(0.34,1.56,0.64,1) forwards; }
+
+/* ── NAVBAR ── */
+.navbar{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:15px;
+  padding:15px;
+  background:rgba(255,255,255,0.08);
+  backdrop-filter:blur(12px);
+  position:fixed;
+  width:100%;
+  top:0;
+  z-index:1000;
+  box-shadow:0 5px 15px rgba(0,0,0,0.3);
+}
+
+.navbar .nav-links{
+  display:flex;
+  gap:15px;
+  align-items:center;
+  flex-wrap:wrap;
+  justify-content:center;
+}
+
+.navbar a{
+  text-decoration:none;
+  color:white;
+  padding:10px 16px;
+  border-radius:8px;
+  background:linear-gradient(135deg,#2d8ac7,#0072ff);
+  font-size:14px;
+  transition:0.3s;
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+
+.navbar a:hover{
+  background:linear-gradient(135deg,#00c6ff,#00e0ff);
+  color:black;
+  transform:translateY(-2px);
+}
+
+.navbar .logout-btn{
+  position:absolute;
+  right:20px;
+  background:linear-gradient(135deg,#f7971e,#ffd200) !important;
+  color:black !important;
+}
+.navbar .logout-btn:hover{
+  background:linear-gradient(135deg,#ffd200,#f7971e) !important;
+  color:black !important;
+}
+
+/* ── MOBILE ── */
+@media(max-width:768px){
+  .container{ width:95%; }
+  .navbar .nav-links{ gap:8px; }
+  .navbar a{ padding:8px 10px; font-size:12px; }
+  .navbar .logout-btn{ position:static; }
+}
+
+</style>
+</head>
+
+<body>
+<!-- ── NAVBAR ── -->
+<div class="navbar">
+  <div class="nav-links">
+    <a href="/dashboard"><i class="fa fa-home"></i> Dashboard</a>
+    <a href="/create_account"><i class="fa fa-user-plus"></i> Add Member</a>
+    <a href="/deposit"><i class="fa fa-coins"></i> Deposit</a>
+    <a href="/withdraw"><i class="fa fa-money-bill"></i> Withdraw</a>
+    <a href="/new_loan"><i class="fa fa-hand-holding-dollar"></i> Add Loan</a>
+    <a href="/loan_payment"><i class="fa fa-credit-card"></i> Repay Loan</a>
+    <a href="/add_service_expense"><i class="fa fa-file-invoice-dollar"></i> Service Expense</a>
+    <a href="/report"><i class="fa fa-chart-pie"></i> Reports</a>
+  </div>
+  <a href="/logout" class="logout-btn"><i class="fa fa-sign-out-alt"></i> Logout</a>
+</div>
+
+
+<!-- ── SUCCESS POPUP ── -->
+<div id="successOverlay">
+  <div id="successPopup">
+    <div class="popup-icon-wrap">✅</div>
+    <h3>Withdrawal Successful!</h3>
+    <p>The withdrawal has been recorded successfully.</p>
+    <div class="popup-divider"></div>
+    <button class="ok-btn" onclick="closeSuccessPopup()">OK - View Report</button>
+  </div>
+</div>
+
+<!-- ── ERROR POPUP ── -->
+<div id="errorOverlay">
+  <div id="errorPopup">
+    <div class="error-icon-wrap">❌</div>
+    <h3>Insufficient Balance!</h3>
+    <p id="errorMsg">You don't have enough balance to withdraw this amount.</p>
+    <div class="error-divider"></div>
+    <button class="close-btn" onclick="closeErrorPopup()">OK - Try Again</button>
+  </div>
+</div>
+
+<div class="container">
+
+  <h2><i class="fa fa-money-bill-wave" style="color:#00e0ff;"></i> Withdraw Money</h2>
+
+  <form method="post" id="withdrawForm">
+
+    <div class="row">
+      <div class="col">
+        <label>Customer</label>
+        <div class="dd-wrap">
+          <div class="dd-input-row" id="nameRow">
+            <input type="text" id="nameSearch" placeholder="Search name..." readonly>
+            <span class="dd-arrow" id="nameArrow">▼</span>
+          </div>
+          <div class="dd-list" id="nameList"></div>
+        </div>
+      </div>
+
+      <div class="or">OR</div>
+
+      <div class="col">
+        <label>Account</label>
+        <div class="dd-wrap">
+          <div class="dd-input-row" id="accRow">
+            <input type="text" id="accSearch" placeholder="Search acc no..." readonly>
+            <span class="dd-arrow" id="accArrow">▼</span>
+          </div>
+          <div class="dd-list" id="accList"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hidden select keeps name="customer" for Flask POST -->
+    <select id="customerSelect" name="customer" required style="display:none;">
+      <option value="">Select Name</option>
+      {% for c in customers %}
+      <option value="{{c.id}}" data-acc="{{c.account_number}}" data-mobile="{{c.mobile}}">{{c.name}}</option>
+      {% endfor %}
+    </select>
+
+    <label>Phone Number</label>
+    <input type="text" id="phoneInput" readonly placeholder="Auto-filled" style="margin-bottom:10px;">
+
+    <div id="infoCard" style="display:none;">
+      <div class="card-header">📊 Account Summary</div>
+      <div class="card-body">
+        <div class="stat-item">
+          <div class="stat-label">💰 Balance</div>
+          <div class="stat-value green" id="balanceText">₹0</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">🏦 Loan</div>
+          <div class="stat-value" id="loanAmount">₹0</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">✅ Paid</div>
+          <div class="stat-value orange" id="loanPaid">₹0</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">⚠ Remaining</div>
+          <div class="stat-value red" id="loanRemaining">₹0</div>
+        </div>
+      </div>
+    </div>
+    <!-- keep old infoBox id for JS compat -->
+    <div id="infoBox" style="display:none;">
+      <span id="balanceRaw">0</span>
+    </div>
+
+    <label>Amount</label>
+    <input name="amount" type="number" placeholder="Enter withdraw amount" required autocomplete="off">
+
+    <button type="submit"><i class="fa fa-money-bill-transfer"></i> Withdraw Money</button>
+
+  </form>
+
+</div>
+
+<script>
+const customerSelect = document.getElementById("customerSelect");
+const phoneInput     = document.getElementById("phoneInput");
+
+const customers = [
+  {% for c in customers %}
+  { id: "{{c.id}}", name: "{{c.name}}", acc: "{{c.account_number}}", mobile: "{{c.mobile}}" },
+  {% endfor %}
+];
+
+/* ── Load customer data & populate card ── */
+let _balance = 0;
+function loadCustomerData(id) {
+  if (!id) return;
+  fetch("/get_customer_data/" + id)
+  .then(res => res.json())
+  .then(data => {
+    _balance = data.balance;
+    const card = document.getElementById("infoCard");
+    card.style.display = "block";
+    function set(id, val, cls) {
+      const el = document.getElementById(id);
+      el.className = "stat-value " + cls + " animate";
+      el.textContent = "₹" + val;
+      void el.offsetWidth; // restart animation
+      el.className = "stat-value " + cls + " animate";
+    }
+    set("balanceText", data.balance,          "green");
+    set("loanAmount",  data.loan.loan_amount, "");
+    set("loanPaid",    data.loan.paid,        "orange");
+    set("loanRemaining", data.loan.remaining, "red");
+  });
+}
+
+/* ── Generic dropdown builder ── */
+function makeDd(rowId, searchId, arrowId, listId, filterFn, labelFn) {
+  const row    = document.getElementById(rowId);
+  const search = document.getElementById(searchId);
+  const arrow  = document.getElementById(arrowId);
+  const list   = document.getElementById(listId);
+  let open = false;
+
+  function render(q) {
+    q = (q || "").toLowerCase().trim();
+    const matches = customers.filter(c => filterFn(c, q));
+    list.innerHTML = "";
+    if (!matches.length) { list.innerHTML = '<div class="dd-empty">No results found</div>'; return; }
+    matches.forEach(c => {
+      const d = document.createElement("div");
+      d.className = "dd-item";
+      d.textContent = labelFn(c);
+      d.addEventListener("mousedown", e => { e.preventDefault(); pick(c); });
+      list.appendChild(d);
+    });
+  }
+
+  function openDd() {
+    search.readOnly = false; search.value = "";
+    render("");
+    list.classList.add("open"); arrow.classList.add("open");
+    open = true; search.focus();
+  }
+
+  function closeDd(c) {
+    list.classList.remove("open"); arrow.classList.remove("open");
+    open = false; search.readOnly = true;
+    search.value = c ? labelFn(c) : "";
+    if (!c) search.placeholder = search.dataset.ph;
+  }
+
+  function pick(c) {
+    customerSelect.value = c.id;
+    phoneInput.value = c.mobile || "";
+    loadCustomerData(c.id);
+    nameClose(c); accClose(c);
+  }
+
+  row.addEventListener("click", () => open ? closeDd(currentC()) : openDd());
+  search.addEventListener("input", () => render(search.value));
+  search.addEventListener("blur", () => setTimeout(() => closeDd(currentC()), 150));
+  document.addEventListener("click", e => { if (!row.contains(e.target) && !list.contains(e.target)) closeDd(currentC()); });
+
+  return { closeDd };
+}
+
+let _selected = null;
+function currentC() { return _selected; }
+function nameClose(c) { _selected = c; nameDd.closeDd(c); }
+function accClose(c)  { _selected = c; accDd.closeDd(c); }
+
+const nameDd = makeDd("nameRow","nameSearch","nameArrow","nameList",
+  (c,q) => !q || c.name.toLowerCase().includes(q), c => c.name);
+document.getElementById("nameSearch").dataset.ph = "Search name...";
+
+const accDd = makeDd("accRow","accSearch","accArrow","accList",
+  (c,q) => !q || c.acc.includes(q), c => c.acc);
+document.getElementById("accSearch").dataset.ph = "Search acc no...";
+
+document.getElementById("withdrawForm").addEventListener("submit", function(e){
+  const amount = parseFloat(document.querySelector("input[name='amount']").value || 0);
+  if (amount > _balance) {
+    e.preventDefault();
+    const bal = "₹" + _balance.toLocaleString("en-IN");
+    document.getElementById("errorMsg").textContent =
+      "Your current balance is " + bal + ". You cannot withdraw more than your available balance.";
+    document.getElementById("errorOverlay").classList.add("show");
+    return false;
+  }
+});
+
+function closeErrorPopup() {
+  document.getElementById("errorOverlay").classList.remove("show");
+}
+
+/* ── POPUP ── */
+function closeSuccessPopup() {
+  window.location.href = "/deposit_report";
+}
+
+if (window.location.search.includes("success=1")) {
+  document.getElementById("successOverlay").classList.add("show");
+}
+</script>
+
+</script>
+
+</body>
+</html>

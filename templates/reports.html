@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reports</title>
+<link href="/static/fontawesome/css/all.min.css" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+    min-height: 100vh;
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 30px 20px;
+}
+.container {
+    text-align: center;
+    width: 100%;
+    max-width: 500px;
+}
+h1 {
+    font-size: 28px;
+    margin-bottom: 10px;
+    color: #00e0ff;
+    letter-spacing: 1px;
+}
+.section-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: rgba(255,255,255,0.4);
+    margin: 18px 0 10px;
+    text-align: left;
+    padding-left: 2px;
+}
+.grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin-bottom: 4px;
+}
+.btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 20px 15px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 12px;
+    color: white;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+    backdrop-filter: blur(10px);
+    transition: 0.3s;
+}
+.btn i {
+    font-size: 26px;
+    color: #00e0ff;
+}
+.btn:hover {
+    transform: translateY(-4px);
+    background: rgba(0,198,255,0.15);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+    border-color: #00e0ff;
+}
+
+/* New member-reports section — accent color variant */
+.btn.member i {
+    color: #7dd3fc;
+}
+.btn.member:hover {
+    background: rgba(125,211,252,0.15);
+    border-color: #7dd3fc;
+}
+
+/* Pending dues button — red accent */
+.btn.dues i {
+    color: #ff6b6b;
+}
+.btn.dues:hover {
+    background: rgba(255,107,107,0.15);
+    border-color: #ff6b6b;
+    box-shadow: 0 10px 25px rgba(255,107,107,0.2);
+}
+
+.btn.back {
+    grid-column: span 2;
+    background: linear-gradient(90deg, #00c6ff, #0072ff);
+    border: none;
+    padding: 15px;
+    font-size: 15px;
+    margin-top: 6px;
+}
+.btn.back i { color: white; }
+.btn.back:hover {
+    transform: scale(1.03);
+    box-shadow: 0 8px 20px rgba(0,198,255,0.4);
+}
+
+.divider {
+    border: none;
+    border-top: 1px solid rgba(255,255,255,0.1);
+    margin: 18px 0 4px;
+}
+
+@media(max-width: 480px) {
+    .grid { grid-template-columns: 1fr; }
+    .btn.back { grid-column: span 1; }
+}
+.top-nav {
+    position: fixed;
+    top: 18px;
+    right: 22px;
+    display: flex;
+    gap: 10px;
+    z-index: 1000;
+}
+.top-nav a {
+    text-decoration: none;
+    padding: 9px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    transition: 0.25s;
+    white-space: nowrap;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.35);
+}
+.top-nav .btn-dashboard {
+    background: linear-gradient(90deg, #00c6ff, #0072ff);
+    color: white;
+    border: 1px solid rgba(0,198,255,0.4);
+}
+.top-nav .btn-dashboard:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0,198,255,0.5);
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+    <h1><i class="fa fa-chart-bar"></i> Reports</h1>
+
+    <!-- Existing financial reports -->
+    <div class="section-label">Financial Reports</div>
+    <div class="grid">
+        <a href="/deposit_report" class="btn">
+            <i class="fa fa-exchange-alt"></i>
+            Deposit &amp; Withdrawal
+        </a>
+        <a href="/loan_transactions_report" class="btn">
+            <i class="fa fa-hand-holding-usd"></i>
+            Loan Transactions
+        </a>
+        <a href="/service_report" class="btn">
+            <i class="fa fa-file-invoice"></i>
+            Service Charge
+        </a>
+        <a href="/customer_report" class="btn">
+            <i class="fa fa-user-circle"></i>
+            Member Report
+        </a>
+    </div>
+
+    <!-- New member / loan / balance reports -->
+    <hr class="divider">
+    <div class="section-label">Member &amp; Loan Reports</div>
+    <div class="grid">
+        <a href="/customers" class="btn member">
+            <i class="fa fa-users"></i>
+            Customer List
+        </a>
+        <a href="/active_loans_report" class="btn member">
+            <i class="fa fa-file-invoice-dollar"></i>
+            Active Loans
+        </a>
+        <a href="/customer_balance_report" class="btn member">
+            <i class="fa fa-wallet"></i>
+            Deposits
+        </a>
+        <a href="/pending_dues" class="btn dues" style="border-color: rgba(255,107,107,0.3);">
+            <i class="fa fa-bell"></i>
+            Pending Dues
+        </a>
+    </div>
+
+	<div class="top-nav">
+		<a href="/dashboard" class="btn-dashboard"><i class="fa fa-home"></i> Dashboard</a>
+	</div>
+</div>
+</body>
+</html>

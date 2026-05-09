@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Customer Balance Report</title>
+<link href="/static/fontawesome/css/all.min.css" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+    min-height: 100vh;
+    color: white;
+    padding: 30px 20px;
+}
+h1 { text-align: center; font-size: 28px; margin-bottom: 25px; color: #00e0ff; letter-spacing: 1px; }
+.summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 15px;
+    margin-bottom: 25px;
+    max-width: 1100px;
+    margin-left: auto;
+    margin-right: auto;
+}
+.card {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    backdrop-filter: blur(10px);
+    transition: 0.3s;
+}
+.card:hover { transform: translateY(-4px); box-shadow: 0 10px 25px rgba(0,0,0,0.4); }
+.card i { font-size: 24px; color: #00e0ff; margin-bottom: 8px; }
+.card .val { font-size: 22px; font-weight: bold; color: #00e0ff; margin: 5px 0; }
+.card .val.green { color: #2ecc71; }
+.card .val.red   { color: #e74c3c; }
+.card .lbl { font-size: 12px; opacity: 0.75; }
+.search-wrap { max-width: 1100px; margin: 0 auto 15px auto; position: relative; }
+.search-wrap i { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #aaa; font-size: 15px; }
+.search-wrap input {
+    width: 100%;
+    padding: 12px 14px 12px 40px;
+    border-radius: 8px;
+    border: none;
+    font-size: 14px;
+    background: rgba(255,255,255,0.95);
+    color: #222;
+    outline: none;
+}
+.table-wrap {
+    max-width: 1100px;
+    margin: 0 auto;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.4);
+}
+table { width: 100%; border-collapse: collapse; background: rgba(255,255,255,0.06); backdrop-filter: blur(10px); }
+thead tr { background: linear-gradient(90deg, #00c6ff, #0072ff); }
+th { padding: 13px 15px; text-align: left; font-size: 13px; font-weight: 600; color: white; letter-spacing: 0.5px; }
+td { padding: 12px 15px; font-size: 13px; border-bottom: 1px solid rgba(255,255,255,0.07); color: rgba(255,255,255,0.9); }
+tbody tr:hover { background: rgba(0,198,255,0.08); }
+tbody tr:last-child td { border-bottom: none; }
+.balance { color: #2ecc71; font-weight: bold; }
+tfoot td {
+    padding: 13px 15px;
+    background: rgba(0,114,255,0.2);
+    font-weight: bold;
+    font-size: 13px;
+    color: #00e0ff;
+    border-top: 1px solid rgba(255,255,255,0.15);
+}
+.nav { display: none; }
+
+/* ── TOP NAV ── */
+.top-nav {
+    position: fixed;
+    top: 18px;
+    right: 22px;
+    display: flex;
+    gap: 10px;
+    z-index: 1000;
+}
+.top-nav a {
+    text-decoration: none;
+    padding: 9px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    transition: 0.25s;
+    white-space: nowrap;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.35);
+}
+.top-nav .btn-report {
+    background: rgba(255,255,255,0.12);
+    color: rgba(255,255,255,0.9);
+    border: 1px solid rgba(255,255,255,0.22);
+    backdrop-filter: blur(8px);
+}
+.top-nav .btn-report:hover { background: rgba(255,255,255,0.22); transform: translateY(-2px); }
+.top-nav .btn-dashboard {
+    background: linear-gradient(90deg, #00c6ff, #0072ff);
+    color: white;
+    border: 1px solid rgba(0,198,255,0.4);
+}
+.top-nav .btn-dashboard:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,198,255,0.5); }
+@media(max-width: 768px) {
+    .summary { grid-template-columns: repeat(2, 1fr); }
+    th, td { padding: 10px 8px; font-size: 12px; }
+}
+
+/* ── PAGINATION ── */
+.pagination-bar {
+    max-width: 1100px;
+    margin: 0 auto 12px auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+.pagination-info { font-size: 13px; opacity: 0.75; }
+.pagination-controls { display: flex; align-items: center; gap: 8px; }
+.page-btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 7px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.25s;
+}
+.page-btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none !important; }
+.page-btn.nav-btn {
+    background: rgba(255,255,255,0.12);
+    color: rgba(255,255,255,0.9);
+    border: 1px solid rgba(255,255,255,0.2);
+}
+.page-btn.nav-btn:not(:disabled):hover { background: rgba(255,255,255,0.22); transform: translateY(-2px); }
+.page-btn.full-btn {
+    background: linear-gradient(90deg, #00c6ff, #0072ff);
+    color: white;
+    border: 1px solid rgba(0,198,255,0.4);
+    box-shadow: 0 4px 12px rgba(0,114,255,0.3);
+}
+.page-btn.full-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,198,255,0.5); }
+.page-counter {
+    font-size: 13px;
+    font-weight: 600;
+    color: #00e0ff;
+    min-width: 80px;
+    text-align: center;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="top-nav">
+    <a href="/report" class="btn-report">⬅ Reports</a>
+    <a href="/dashboard" class="btn-dashboard">🏠 Dashboard</a>
+</div>
+
+<h1><i class="fa fa-coins"></i> Customer Balance Report</h1>
+
+<div class="summary">
+    <div class="card">
+        <i class="fa fa-users"></i>
+        <div class="val">{{ customers | length }}</div>
+        <div class="lbl">Total Customers</div>
+    </div>
+    <div class="card">
+        <i class="fa fa-arrow-circle-down"></i>
+        <div class="val green">₹{{ customers | sum(attribute='total_deposit') | round(2) }}</div>
+        <div class="lbl">Total Deposits</div>
+    </div>
+    <div class="card">
+        <i class="fa fa-arrow-circle-up"></i>
+        <div class="val red">₹{{ customers | sum(attribute='total_withdraw') | round(2) }}</div>
+        <div class="lbl">Total Withdrawals</div>
+    </div>
+	<div class="card">
+        <i class="fa fa-cog"></i>
+        <div class="val red">₹{{ customers | sum(attribute='total_service_charge') | round(2) }}</div>
+        <div class="lbl">Total Service Charge</div>
+    </div>
+    <div class="card">
+        <i class="fa fa-wallet"></i>
+        <div class="val">₹{{ total_balance | round(2) }}</div>
+        <div class="lbl">Total Balance</div>
+    </div>
+</div>
+
+<div class="search-wrap">
+    <i class="fa fa-search"></i>
+    <input type="text" id="searchInput"
+           placeholder="Search by Acc No / Name / Mobile..."
+           onkeyup="filterTable()">
+</div>
+
+
+<div class="pagination-bar" id="paginationBar" style="display:none;">
+    <div class="pagination-info" id="pageInfo">Showing rows…</div>
+    <div class="pagination-controls">
+        <button class="page-btn nav-btn" id="prevBtn" onclick="changePage('balanceTable',-1)" disabled>◀ Prev</button>
+        <span class="page-counter" id="pageCounter">1 / 1</span>
+        <button class="page-btn nav-btn" id="nextBtn" onclick="changePage('balanceTable',1)">Next ▶</button>
+        <button class="page-btn full-btn" id="fullReportBtn" onclick="toggleFullReport('balanceTable')">📋 Full Report</button>
+    </div>
+</div>
+<div class="table-wrap">
+    <table id="balanceTable">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th><i class="fa fa-hashtag"></i> Acc No</th>
+                <th><i class="fa fa-user"></i> Customer Name</th>
+                <th><i class="fa fa-phone"></i> Mobile</th>
+                <th><i class="fa fa-arrow-circle-down"></i> Total Deposit</th>
+                <th><i class="fa fa-arrow-circle-up"></i> Total Withdraw</th>
+				<th><i class="fa fa-cog"></i> Service Charge</th>
+                <th><i class="fa fa-wallet"></i> Balance</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for c in customers %}
+            <tr>
+                <td>{{ loop.index }}</td>
+                <td>{{ c.account_number }}</td>
+                <td>{{ c.name }}</td>
+                <td>{{ c.mobile }}</td>
+                <td>₹{{ c.total_deposit }}</td>
+                <td>₹{{ c.total_withdraw }}</td>
+				<td style="color:#e74c3c;">₹{{ c.total_service_charge }}</td>
+                <td class="balance">₹{{ c.balance }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="4">Total</td>
+                <td>₹{{ customers | sum(attribute='total_deposit') | round(2) }}</td>
+                <td>₹{{ customers | sum(attribute='total_withdraw') | round(2) }}</td>
+				<td>₹{{ customers | sum(attribute='total_service_charge') | round(2) }}</td>
+                <td>₹{{ total_balance | round(2) }}</td>
+            </tr>
+        </tfoot>
+    </table>
+</div>
+
+
+<div class="pagination-bar" id="paginationBarBottom" style="display:none;">
+    <div class="pagination-info" id="pageInfoBottom">Showing rows…</div>
+    <div class="pagination-controls">
+        <button class="page-btn nav-btn" id="prevBtnBottom" onclick="changePage('balanceTable',-1)" disabled>◀ Prev</button>
+        <span class="page-counter" id="pageCounterBottom">1 / 1</span>
+        <button class="page-btn nav-btn" id="nextBtnBottom" onclick="changePage('balanceTable',1)">Next ▶</button>
+        <button class="page-btn full-btn" id="fullReportBtnBottom" onclick="toggleFullReport('balanceTable')">📋 Full Report</button>
+    </div>
+</div>
+<div class="nav">
+    <a href="/dashboard">⬅ Back to Dashboard</a>
+</div>
+
+<script>
+function filterTable() {
+    var input = document.getElementById("searchInput");
+    var filter = input.value.toLowerCase();
+    var table = document.getElementById("balanceTable");
+    var tr = table.getElementsByTagName("tr");
+    for (var i = 1; i < tr.length; i++) {
+        var tdAccNo  = tr[i].getElementsByTagName("td")[1];
+        var tdName   = tr[i].getElementsByTagName("td")[2];
+        var tdMobile = tr[i].getElementsByTagName("td")[3];
+        if (tdAccNo && tdName && tdMobile) {
+            var accNoText  = tdAccNo.textContent  || tdAccNo.innerText;
+            var nameText   = tdName.textContent   || tdName.innerText;
+            var mobileText = tdMobile.textContent || tdMobile.innerText;
+            if (accNoText.toLowerCase().indexOf(filter) > -1 ||
+                nameText.toLowerCase().indexOf(filter) > -1 ||
+                mobileText.toLowerCase().indexOf(filter) > -1) {
+                tr[i].style.display = "";
+            } else {
+                tr[i].style.display = "none";
+            }
+        }
+    }
+}
+</script>
+
+<script>
+(function(){
+    var ROWS_PER_PAGE = 25;
+    var state = {
+        tableId:     'balanceTable',
+        currentPage: 1,
+        isFull:      false,
+        allRows:     [],
+        filteredRows:[]
+    };
+
+    function getRows() {
+        var tbody = document.querySelector('#' + state.tableId + ' tbody');
+        if (!tbody) return [];
+        return Array.from(tbody.querySelectorAll('tr'));
+    }
+
+    function totalPages() {
+        return Math.max(1, Math.ceil(state.filteredRows.length / ROWS_PER_PAGE));
+    }
+
+    function syncBar(suffix) {
+        var total  = state.filteredRows.length;
+        var tp     = totalPages();
+        var start  = (state.currentPage - 1) * ROWS_PER_PAGE + 1;
+        var end    = Math.min(state.currentPage * ROWS_PER_PAGE, total);
+        var infoTx = state.isFull
+            ? 'Showing all ' + total + ' rows'
+            : (total === 0 ? 'No rows' : 'Showing ' + start + '\u2013' + end + ' of ' + total + ' rows');
+        var ctrTx  = state.isFull ? '\u2014' : (state.currentPage + ' / ' + tp);
+
+        var pi = document.getElementById('pageInfo'    + suffix);
+        var pc = document.getElementById('pageCounter' + suffix);
+        var pb = document.getElementById('prevBtn'     + suffix);
+        var nb = document.getElementById('nextBtn'     + suffix);
+        if (pi) pi.textContent = infoTx;
+        if (pc) pc.textContent = ctrTx;
+        if (pb) pb.disabled = state.isFull || state.currentPage === 1;
+        if (nb) nb.disabled = state.isFull || state.currentPage >= tp;
+    }
+
+    function renderPage() {
+        var start = (state.currentPage - 1) * ROWS_PER_PAGE;
+        var end   = start + ROWS_PER_PAGE;
+        state.allRows.forEach(function(r) { r.style.display = 'none'; });
+        state.filteredRows.forEach(function(r, i) {
+            r.style.display = (state.isFull || (i >= start && i < end)) ? '' : 'none';
+        });
+        syncBar('');
+        syncBar('Bottom');
+    }
+
+    window.changePage = function(tblId, delta) {
+        if (tblId !== state.tableId) return;
+        var np = state.currentPage + delta;
+        if (np < 1 || np > totalPages()) return;
+        state.currentPage = np;
+        renderPage();
+        var tbl = document.getElementById(state.tableId);
+        if (tbl) tbl.scrollIntoView({behavior:'smooth', block:'start'});
+    };
+
+    function applyFullStyle(suffix, full) {
+        var btn = document.getElementById('fullReportBtn' + suffix);
+        if (!btn) return;
+        if (full) {
+            btn.textContent = '\uD83D\uDCC4 Paginate';
+            btn.style.background = 'linear-gradient(90deg,#f7971e,#ffd200)';
+            btn.style.color = '#111';
+        } else {
+            btn.textContent = '\uD83D\uDCCB Full Report';
+            btn.style.background = 'linear-gradient(90deg,#00c6ff,#0072ff)';
+            btn.style.color = 'white';
+        }
+    }
+
+    window.toggleFullReport = function(tblId) {
+        if (tblId !== state.tableId) return;
+        state.isFull = !state.isFull;
+        applyFullStyle('',       state.isFull);
+        applyFullStyle('Bottom', state.isFull);
+        renderPage();
+    };
+
+    /* hook existing filterTable if present */
+    var origFilter = window.filterTable;
+    window.filterTable = function() {
+        if (origFilter) origFilter();
+        /* re-build filteredRows from visible rows */
+        state.filteredRows = state.allRows.filter(function(r) {
+            return r.style.display !== 'none';
+        });
+        state.currentPage = 1;
+        state.isFull = false;
+        applyFullStyle('',       false);
+        applyFullStyle('Bottom', false);
+        renderPage();
+    };
+
+    function init() {
+        state.allRows      = getRows();
+        state.filteredRows = state.allRows.slice();
+        if (state.allRows.length > ROWS_PER_PAGE) {
+            var pb = document.getElementById('paginationBar');
+            var pbb = document.getElementById('paginationBarBottom');
+            if (pb)  pb.style.display  = 'flex';
+            if (pbb) pbb.style.display = 'flex';
+        }
+        renderPage();
+    }
+
+    if (document.readyState !== 'loading') init();
+    else document.addEventListener('DOMContentLoaded', init);
+})();
+</script>
+
+</body>
+</html>

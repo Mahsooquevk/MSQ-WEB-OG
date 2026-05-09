@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pending Dues</title>
+<link href="/static/fontawesome/css/all.min.css" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+    min-height: 100vh;
+    color: white;
+    padding: 30px 20px;
+}
+.top-nav {
+    position: fixed; top: 18px; right: 22px;
+    display: flex; gap: 10px; z-index: 1000;
+}
+.top-nav a {
+    text-decoration: none; padding: 9px 16px; border-radius: 8px;
+    font-size: 13px; font-weight: 600; display: flex; align-items: center;
+    gap: 7px; transition: 0.25s; white-space: nowrap;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.35);
+}
+.btn-dashboard {
+    background: linear-gradient(90deg, #00c6ff, #0072ff);
+    color: white; border: 1px solid rgba(0,198,255,0.4);
+}
+.btn-dashboard:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,198,255,0.5); }
+h1 { text-align: center; font-size: 28px; margin-bottom: 25px; color: #ff6b6b; letter-spacing: 1px; padding-top: 10px; }
+.summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 15px; margin-bottom: 25px;
+    max-width: 1100px; margin-left: auto; margin-right: auto;
+}
+.card {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 12px; padding: 20px;
+    text-align: center; backdrop-filter: blur(10px);
+}
+.card i { font-size: 24px; color: #ff6b6b; margin-bottom: 8px; }
+.card .val { font-size: 22px; font-weight: bold; color: #ff6b6b; margin: 5px 0; }
+.card .lbl { font-size: 12px; opacity: 0.75; }
+.search-wrap { max-width: 1100px; margin: 0 auto 15px auto; position: relative; }
+.search-wrap i { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #aaa; font-size: 15px; }
+.search-wrap input {
+    width: 100%; padding: 12px 14px 12px 40px;
+    border-radius: 8px; border: none; font-size: 14px;
+    background: rgba(255,255,255,0.95); color: #222; outline: none;
+}
+.table-wrap {
+    max-width: 1100px; margin: 0 auto;
+    border-radius: 12px; overflow: hidden;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.4);
+}
+table { width: 100%; border-collapse: collapse; background: rgba(255,255,255,0.06); }
+thead tr { background: linear-gradient(90deg, #c0392b, #e74c3c); }
+th { padding: 13px 15px; text-align: left; font-size: 13px; font-weight: 600; color: white; }
+td { padding: 12px 15px; font-size: 13px; border-bottom: 1px solid rgba(255,255,255,0.07); color: rgba(255,255,255,0.9); }
+tbody tr:hover { background: rgba(255,107,107,0.08); }
+tbody tr:last-child td { border-bottom: none; }
+.overdue-amt { color: #ff6b6b; font-weight: bold; }
+.no-data { text-align: center; padding: 50px; opacity: 0.6; font-size: 16px; }
+
+/* ── PAGINATION ── */
+.pagination-bar {
+    max-width: 1100px;
+    margin: 0 auto 12px auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+.pagination-info { font-size: 13px; opacity: 0.75; }
+.pagination-controls { display: flex; align-items: center; gap: 8px; }
+.page-btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 7px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.25s;
+}
+.page-btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none !important; }
+.page-btn.nav-btn {
+    background: rgba(255,255,255,0.12);
+    color: rgba(255,255,255,0.9);
+    border: 1px solid rgba(255,255,255,0.2);
+}
+.page-btn.nav-btn:not(:disabled):hover { background: rgba(255,255,255,0.22); transform: translateY(-2px); }
+.page-btn.full-btn {
+    background: linear-gradient(90deg, #00c6ff, #0072ff);
+    color: white;
+    border: 1px solid rgba(0,198,255,0.4);
+    box-shadow: 0 4px 12px rgba(0,114,255,0.3);
+}
+.page-btn.full-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,198,255,0.5); }
+.page-counter {
+    font-size: 13px;
+    font-weight: 600;
+    color: #00e0ff;
+    min-width: 80px;
+    text-align: center;
+}
+
+</style>
+</head>
+<body>
+
+<div class="top-nav">
+    <a href="/dashboard" class="btn-dashboard"><i class="fa fa-home"></i> Dashboard</a>
+</div>
+
+<h1><i class="fa fa-bell"></i> Pending Dues</h1>
+
+<div class="summary" style="margin-bottom:25px;">
+    <div class="card">
+        <i class="fa fa-users"></i>
+        <div class="val">{{ overdue_list | length }}</div>
+        <div class="lbl">Overdue Members</div>
+    </div>
+    <div class="card">
+        <i class="fa fa-rupee-sign"></i>
+        <div class="val">₹{{ overdue_list | sum(attribute='overdue_amount') | round(2) }}</div>
+        <div class="lbl">Total Overdue Amount</div>
+    </div>
+</div>
+
+<div class="search-wrap">
+    <i class="fa fa-search"></i>
+    <input type="text" id="searchInput" placeholder="Search by name / account / mobile..." onkeyup="filterTable()">
+</div>
+
+
+<div class="pagination-bar" id="paginationBar" style="display:none;">
+    <div class="pagination-info" id="pageInfo">Showing rows…</div>
+    <div class="pagination-controls">
+        <button class="page-btn nav-btn" id="prevBtn" onclick="changePage('duesTable',-1)" disabled>◀ Prev</button>
+        <span class="page-counter" id="pageCounter">1 / 1</span>
+        <button class="page-btn nav-btn" id="nextBtn" onclick="changePage('duesTable',1)">Next ▶</button>
+        <button class="page-btn full-btn" id="fullReportBtn" onclick="toggleFullReport('duesTable')">📋 Full Report</button>
+    </div>
+</div>
+<div class="table-wrap">
+    {% if overdue_list %}
+    <table id="duesTable">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th><i class="fa fa-hashtag"></i> Loan Acc</th>
+                <th><i class="fa fa-user"></i> Name</th>
+                <th><i class="fa fa-phone"></i> Mobile</th>
+                <th><i class="fa fa-coins"></i> Loan Amount</th>
+                <th><i class="fa fa-calendar"></i> Pending Tenure</th>
+                <th><i class="fa fa-calendar-check"></i> Monthly Due</th>
+                <th><i class="fa fa-check-circle"></i> Paid So Far</th>                
+                <th><i class="fa fa-exclamation-circle"></i> Overdue</th>
+				<th><i class="fa fa-exclamation-triangle"></i> Months Pending</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for d in overdue_list %}
+            <tr>
+                <td>{{ loop.index }}</td>
+                <td>{{ d.loan_account_number }}</td>
+                <td>{{ d.name }}</td>
+                <td>{{ d.mobile }}</td>
+                <td>₹{{ d.loan_amount }}</td>
+                {% if d.pending_tenure == 'Overdue' %}
+				<td style="color:#ff6b6b; font-weight:bold;">⚠ Tenure Completed</td>
+				{% else %}
+				<td>{{ d.pending_tenure }} months</td>
+				{% endif %}
+                <td>₹{{ d.monthly_due }}</td>
+                <td>₹{{ d.total_paid }}</td>                
+                <td class="overdue-amt">₹{{ d.overdue_amount }}</td>
+				{% if d.overdue_months > 0 %}
+				<td style="color:#ff6b6b; font-weight:bold;">{{ d.overdue_months }} months</td>
+				{% else %}
+				<td style="opacity:0.5;">—</td>
+				{% endif %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="no-data">✅ No pending dues! All members are up to date.</div>
+    {% endif %}
+</div>
+
+
+<div class="pagination-bar" id="paginationBarBottom" style="display:none;">
+    <div class="pagination-info" id="pageInfoBottom">Showing rows…</div>
+    <div class="pagination-controls">
+        <button class="page-btn nav-btn" id="prevBtnBottom" onclick="changePage('duesTable',-1)" disabled>◀ Prev</button>
+        <span class="page-counter" id="pageCounterBottom">1 / 1</span>
+        <button class="page-btn nav-btn" id="nextBtnBottom" onclick="changePage('duesTable',1)">Next ▶</button>
+        <button class="page-btn full-btn" id="fullReportBtnBottom" onclick="toggleFullReport('duesTable')">📋 Full Report</button>
+    </div>
+</div>
+<script>
+function filterTable() {
+    var filter = document.getElementById("searchInput").value.toLowerCase();
+    var rows = document.querySelectorAll("#duesTable tbody tr");
+    rows.forEach(function(row) {
+        row.style.display = row.innerText.toLowerCase().includes(filter) ? "" : "none";
+    });
+}
+</script>
+
+
+<script>
+(function(){
+    var ROWS_PER_PAGE = 25;
+    var state = {
+        tableId:     'duesTable',
+        currentPage: 1,
+        isFull:      false,
+        allRows:     [],
+        filteredRows:[]
+    };
+
+    function getRows() {
+        var tbody = document.querySelector('#' + state.tableId + ' tbody');
+        if (!tbody) return [];
+        return Array.from(tbody.querySelectorAll('tr'));
+    }
+
+    function totalPages() {
+        return Math.max(1, Math.ceil(state.filteredRows.length / ROWS_PER_PAGE));
+    }
+
+    function syncBar(suffix) {
+        var total  = state.filteredRows.length;
+        var tp     = totalPages();
+        var start  = (state.currentPage - 1) * ROWS_PER_PAGE + 1;
+        var end    = Math.min(state.currentPage * ROWS_PER_PAGE, total);
+        var infoTx = state.isFull
+            ? 'Showing all ' + total + ' rows'
+            : (total === 0 ? 'No rows' : 'Showing ' + start + '\u2013' + end + ' of ' + total + ' rows');
+        var ctrTx  = state.isFull ? '\u2014' : (state.currentPage + ' / ' + tp);
+
+        var pi = document.getElementById('pageInfo'    + suffix);
+        var pc = document.getElementById('pageCounter' + suffix);
+        var pb = document.getElementById('prevBtn'     + suffix);
+        var nb = document.getElementById('nextBtn'     + suffix);
+        if (pi) pi.textContent = infoTx;
+        if (pc) pc.textContent = ctrTx;
+        if (pb) pb.disabled = state.isFull || state.currentPage === 1;
+        if (nb) nb.disabled = state.isFull || state.currentPage >= tp;
+    }
+
+    function renderPage() {
+        var start = (state.currentPage - 1) * ROWS_PER_PAGE;
+        var end   = start + ROWS_PER_PAGE;
+        state.allRows.forEach(function(r) { r.style.display = 'none'; });
+        state.filteredRows.forEach(function(r, i) {
+            r.style.display = (state.isFull || (i >= start && i < end)) ? '' : 'none';
+        });
+        syncBar('');
+        syncBar('Bottom');
+    }
+
+    window.changePage = function(tblId, delta) {
+        if (tblId !== state.tableId) return;
+        var np = state.currentPage + delta;
+        if (np < 1 || np > totalPages()) return;
+        state.currentPage = np;
+        renderPage();
+        var tbl = document.getElementById(state.tableId);
+        if (tbl) tbl.scrollIntoView({behavior:'smooth', block:'start'});
+    };
+
+    function applyFullStyle(suffix, full) {
+        var btn = document.getElementById('fullReportBtn' + suffix);
+        if (!btn) return;
+        if (full) {
+            btn.textContent = '\uD83D\uDCC4 Paginate';
+            btn.style.background = 'linear-gradient(90deg,#f7971e,#ffd200)';
+            btn.style.color = '#111';
+        } else {
+            btn.textContent = '\uD83D\uDCCB Full Report';
+            btn.style.background = 'linear-gradient(90deg,#00c6ff,#0072ff)';
+            btn.style.color = 'white';
+        }
+    }
+
+    window.toggleFullReport = function(tblId) {
+        if (tblId !== state.tableId) return;
+        state.isFull = !state.isFull;
+        applyFullStyle('',       state.isFull);
+        applyFullStyle('Bottom', state.isFull);
+        renderPage();
+    };
+
+    /* hook existing filterTable if present */
+    var origFilter = window.filterTable;
+    window.filterTable = function() {
+        if (origFilter) origFilter();
+        /* re-build filteredRows from visible rows */
+        state.filteredRows = state.allRows.filter(function(r) {
+            return r.style.display !== 'none';
+        });
+        state.currentPage = 1;
+        state.isFull = false;
+        applyFullStyle('',       false);
+        applyFullStyle('Bottom', false);
+        renderPage();
+    };
+
+    function init() {
+        state.allRows      = getRows();
+        state.filteredRows = state.allRows.slice();
+        if (state.allRows.length > ROWS_PER_PAGE) {
+            var pb = document.getElementById('paginationBar');
+            var pbb = document.getElementById('paginationBarBottom');
+            if (pb)  pb.style.display  = 'flex';
+            if (pbb) pbb.style.display = 'flex';
+        }
+        renderPage();
+    }
+
+    if (document.readyState !== 'loading') init();
+    else document.addEventListener('DOMContentLoaded', init);
+})();
+</script>
+
+</body>
+</html>

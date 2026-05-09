@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Close Account – {{ customer.name }}</title>
+<link href="/static/fontawesome/css/all.min.css" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; font-family:Arial, Helvetica, sans-serif; }
+
+body {
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);
+  color:white;
+  padding:100px 20px 40px;
+}
+
+/* ── NAVBAR ── */
+.navbar{
+  display:flex; justify-content:center; align-items:center; gap:15px;
+  padding:15px; background:rgba(255,255,255,0.08); backdrop-filter:blur(12px);
+  position:fixed; width:100%; top:0; z-index:1000;
+  box-shadow:0 5px 15px rgba(0,0,0,0.3);
+}
+.navbar .nav-links{ display:flex; gap:15px; align-items:center; flex-wrap:wrap; justify-content:center; }
+.navbar a{
+  text-decoration:none; color:white; padding:10px 16px; border-radius:8px;
+  background:linear-gradient(135deg,#2d8ac7,#0072ff); font-size:14px; transition:0.3s;
+  display:flex; align-items:center; gap:6px;
+}
+.navbar a:hover{ background:linear-gradient(135deg,#00c6ff,#00e0ff); color:black; transform:translateY(-2px); }
+.navbar .logout-btn{
+  position:absolute; right:20px;
+  background:linear-gradient(135deg,#f7971e,#ffd200) !important; color:black !important;
+}
+.navbar .logout-btn:hover{ background:linear-gradient(135deg,#ffd200,#f7971e) !important; }
+@media(max-width:768px){
+  .navbar .nav-links{ gap:8px; }
+  .navbar a{ padding:8px 10px; font-size:12px; }
+  .navbar .logout-btn{ position:static; }
+}
+
+.container {
+  width:100%;
+  max-width:520px;
+  padding:35px;
+  border-radius:15px;
+  background:rgba(255,255,255,0.08);
+  backdrop-filter:blur(12px);
+  box-shadow:0 0 30px rgba(0,0,0,0.5);
+  border:1px solid rgba(255,80,80,0.2);
+}
+
+h2 {
+  text-align:center; margin-bottom:6px; font-size:24px;
+  color:#ff6b6b;
+}
+.subtitle {
+  text-align:center; font-size:12px; opacity:0.45;
+  text-transform:uppercase; letter-spacing:1.5px; margin-bottom:24px;
+}
+
+/* Customer info strip */
+.cust-strip {
+  display:flex; align-items:center; gap:14px;
+  background:rgba(255,255,255,0.06);
+  border:1px solid rgba(255,255,255,0.1);
+  border-radius:10px; padding:14px 18px; margin-bottom:22px;
+}
+.cust-strip .avatar {
+  width:48px; height:48px; border-radius:50%;
+  background:linear-gradient(135deg,#e74c3c,#c0392b);
+  display:flex; align-items:center; justify-content:center;
+  font-size:20px; font-weight:bold; flex-shrink:0;
+}
+.cust-strip .info h3 { font-size:16px; color:#fff; margin-bottom:3px; }
+.cust-strip .info span { font-size:12px; opacity:0.6; margin-right:12px; }
+
+/* Settlement breakdown */
+.breakdown {
+  border-radius:12px;
+  background:rgba(255,255,255,0.05);
+  border:1px solid rgba(255,255,255,0.1);
+  overflow:hidden;
+  margin-bottom:22px;
+}
+.breakdown .bk-header {
+  display:flex; align-items:center; gap:8px;
+  padding:10px 16px;
+  background:rgba(231,76,60,0.12);
+  border-bottom:1px solid rgba(231,76,60,0.2);
+  font-size:12px; font-weight:bold;
+  letter-spacing:0.5px; color:#ff6b6b; text-transform:uppercase;
+}
+.bk-row {
+  display:flex; justify-content:space-between; align-items:center;
+  padding:12px 18px;
+  border-bottom:1px solid rgba(255,255,255,0.06);
+  font-size:14px;
+}
+.bk-row:last-child { border-bottom:none; }
+.bk-row .lbl { opacity:0.7; }
+.bk-row .val { font-weight:bold; font-size:15px; }
+.bk-row .val.green  { color:#00ffa3; }
+.bk-row .val.red    { color:#ff6b6b; }
+.bk-row .val.orange { color:#ffb347; }
+.bk-row .val.blue   { color:#00e0ff; }
+.bk-row.net-row {
+  background:rgba(231,76,60,0.08);
+  border-top:1px solid rgba(255,255,255,0.1);
+}
+
+/* Warning box */
+.warn-box {
+  display:flex; gap:12px; align-items:flex-start;
+  background:rgba(255,165,0,0.1);
+  border:1px solid rgba(255,165,0,0.3);
+  border-radius:10px; padding:14px 16px; margin-bottom:22px;
+  font-size:13px; line-height:1.6; color:#ffd080;
+}
+.warn-box .icon { font-size:20px; flex-shrink:0; }
+
+/* Negative warning */
+.neg-warn {
+  display:flex; gap:12px; align-items:flex-start;
+  background:rgba(231,76,60,0.12);
+  border:1px solid rgba(231,76,60,0.3);
+  border-radius:10px; padding:14px 16px; margin-bottom:22px;
+  font-size:13px; line-height:1.6; color:#ff9f9f;
+}
+.neg-warn .icon { font-size:20px; flex-shrink:0; }
+
+/* Form */
+label { font-size:13px; opacity:0.85; display:block; margin-bottom:6px; }
+input[type="text"], input[type="password"], textarea {
+  width:100%; padding:11px 14px; border:none; border-radius:8px;
+  outline:none; font-size:14px; background:rgba(255,255,255,0.92);
+  color:#222; margin-bottom:16px; font-family:Arial,Helvetica,sans-serif;
+}
+textarea { resize:vertical; min-height:70px; line-height:1.5; }
+input::placeholder, textarea::placeholder { color:#aaa; }
+
+.btn-close-account {
+  width:100%; padding:13px; border:none; border-radius:10px;
+  background:linear-gradient(90deg,#ff416c,#ff4b2b);
+  color:white; font-size:16px; font-weight:bold;
+  cursor:pointer; transition:0.3s;
+  display:flex; align-items:center; justify-content:center;
+  gap:10px; letter-spacing:0.5px;
+  box-shadow:0 4px 20px rgba(255,65,108,0.4);
+}
+.btn-close-account:hover { transform:scale(1.04); box-shadow:0 6px 24px rgba(255,75,43,0.55); }
+
+.btn-cancel {
+  display:block; text-align:center; margin-top:14px;
+  color:#00e0ff; font-size:13px; text-decoration:none; opacity:0.8;
+}
+.btn-cancel:hover { opacity:1; text-decoration:underline; }
+
+/* Error alert */
+.alert-error {
+  background:rgba(231,76,60,0.15);
+  border:1px solid rgba(231,76,60,0.4);
+  border-radius:8px; padding:10px 14px;
+  color:#ff6b6b; font-size:13px; margin-bottom:16px;
+  display:flex; align-items:center; gap:8px;
+}
+
+/* Confirm overlay */
+#confirmOverlay {
+  display:none; position:fixed; inset:0;
+  background:rgba(0,0,0,0.7); z-index:9999;
+  align-items:center; justify-content:center;
+  backdrop-filter:blur(4px);
+}
+#confirmOverlay.show { display:flex; }
+#confirmPopup {
+  background:linear-gradient(145deg,#1a0505,#2d0a0a,#3d1010);
+  border:1px solid rgba(255,80,80,0.4);
+  border-radius:20px; padding:40px 36px 32px;
+  text-align:center; color:white;
+  box-shadow:0 20px 60px rgba(0,0,0,0.7), 0 0 40px rgba(255,80,80,0.15);
+  max-width:360px; width:90%;
+  animation:popIn 0.3s cubic-bezier(0.34,1.56,0.64,1);
+}
+@keyframes popIn {
+  from { transform:scale(0.75); opacity:0; }
+  to   { transform:scale(1); opacity:1; }
+}
+.popup-icon-red {
+  width:72px; height:72px; border-radius:50%;
+  background:rgba(231,76,60,0.15);
+  border:2px solid rgba(231,76,60,0.5);
+  display:flex; align-items:center; justify-content:center;
+  margin:0 auto 18px; font-size:32px;
+}
+#confirmPopup h3 { font-size:20px; font-weight:700; margin-bottom:8px; color:#ff6b6b; }
+#confirmPopup p  { font-size:13px; opacity:0.7; margin-bottom:22px; line-height:1.6; }
+.popup-btns { display:flex; gap:12px; }
+.popup-btns button {
+  flex:1; padding:12px; border:none; border-radius:10px;
+  font-size:14px; font-weight:bold; cursor:pointer; transition:0.25s;
+}
+.btn-confirm-yes {
+  background:linear-gradient(90deg,#ff416c,#ff4b2b);
+  color:white; box-shadow:0 4px 15px rgba(255,65,108,0.4);
+}
+.btn-confirm-yes:hover { transform:scale(1.04); }
+.btn-confirm-no {
+  background:rgba(255,255,255,0.1);
+  color:rgba(255,255,255,0.85);
+  border:1px solid rgba(255,255,255,0.2) !important;
+}
+.btn-confirm-no:hover { background:rgba(255,255,255,0.18); }
+</style>
+</head>
+<body>
+
+<!-- NAVBAR -->
+<div class="navbar">
+  <div class="nav-links">
+    <a href="/dashboard"><i class="fa fa-home"></i> Dashboard</a>
+    <a href="/create_account"><i class="fa fa-user-plus"></i> Add Member</a>
+    <a href="/deposit"><i class="fa fa-coins"></i> Deposit</a>
+    <a href="/withdraw"><i class="fa fa-money-bill"></i> Withdraw</a>
+    <a href="/new_loan"><i class="fa fa-hand-holding-dollar"></i> Add Loan</a>
+    <a href="/loan_payment"><i class="fa fa-credit-card"></i> Repay Loan</a>
+    <a href="/add_service_expense"><i class="fa fa-file-invoice-dollar"></i> Service Expense</a>
+    <a href="/report"><i class="fa fa-chart-pie"></i> Reports</a>
+  </div>
+  <a href="/logout" class="logout-btn"><i class="fa fa-sign-out-alt"></i> Logout</a>
+</div>
+
+<!-- Confirm Popup -->
+<div id="confirmOverlay">
+  <div id="confirmPopup">
+    <div class="popup-icon-red">🔒</div>
+    <h3>Confirm Account Closure</h3>
+    <p>This action is <strong>permanent</strong> and cannot be undone.<br>
+       The account will be permanently closed and no further transactions will be allowed.</p>
+    <div class="popup-btns">
+      <button class="btn-confirm-no" onclick="document.getElementById('confirmOverlay').classList.remove('show')">Cancel</button>
+      <button class="btn-confirm-yes" onclick="document.getElementById('closeForm').submit()">Yes, Close Account</button>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <h2><i class="fa fa-lock"></i> Close Account</h2>
+  <div class="subtitle">Permanent Account Closure</div>
+
+  <!-- Customer Info -->
+  <div class="cust-strip">
+    <div class="avatar">{{ customer.name[0].upper() }}</div>
+    <div class="info">
+      <h3>{{ customer.name }}</h3>
+      <span>📂 Acc: {{ customer.account_number }}</span>
+      <span>📱 {{ customer.mobile }}</span>
+    </div>
+  </div>
+
+  {% if request.args.get('error') == 'wrong_password' %}
+  <div class="alert-error"><i class="fa fa-times-circle"></i> Incorrect admin password. Please try again.</div>
+  {% endif %}
+
+  <!-- Settlement Breakdown -->
+  <div class="breakdown">
+    <div class="bk-header"><i class="fa fa-calculator"></i> Settlement Calculation</div>
+    <div class="bk-row">
+      <span class="lbl">💰 Current Balance</span>
+      <span class="val {{ 'green' if balance >= 0 else 'red' }}">₹{{ "%.2f"|format(balance) }}</span>
+    </div>
+    {% if pending_svc > 0 %}
+    <div class="bk-row">
+      <span class="lbl">⚡ Pending Service Charge</span>
+      <span class="val orange">− ₹{{ "%.2f"|format(pending_svc) }}</span>
+    </div>
+    {% endif %}
+    {% if loan_outstanding > 0 %}
+    <div class="bk-row">
+      <span class="lbl">🏦 Outstanding Loan</span>
+      <span class="val red">− ₹{{ "%.2f"|format(loan_outstanding) }}</span>
+    </div>
+    {% endif %}
+    <div class="bk-row net-row">
+      <span class="lbl" style="font-weight:bold;">🤝 Settlement Amount</span>
+      <span class="val {{ 'green' if settlement >= 0 else 'red' }}" style="font-size:18px;">
+        ₹{{ "%.2f"|format(settlement) }}
+      </span>
+    </div>
+  </div>
+
+  {% if settlement < 0 %}
+  <div class="neg-warn">
+    <span class="icon">⚠️</span>
+    <span>This account has a <strong>negative settlement</strong> of ₹{{ "%.2f"|format(settlement|abs) }}.
+    Closing this account means accepting this outstanding due. The account will still be closed.</span>
+  </div>
+  {% elif settlement > 0 %}
+  <div class="warn-box">
+    <span class="icon">💡</span>
+    <span>A settlement of <strong>₹{{ "%.2f"|format(settlement) }}</strong> will be recorded as a withdrawal
+    and the remaining balance will be settled. No further service charges will apply to this account.</span>
+  </div>
+  {% else %}
+  <div class="warn-box">
+    <span class="icon">ℹ️</span>
+    <span>This account has zero settlement. Closing this account will permanently disable all transactions and service charges.</span>
+  </div>
+  {% endif %}
+
+  <!-- Closure Form -->
+  <form method="POST" action="/close_account_confirm" id="closeForm">
+    <input type="hidden" name="customer_id" value="{{ customer.id }}">
+
+    <label><i class="fa fa-pencil-alt" style="opacity:0.6;margin-right:4px;"></i> Closure Note (optional)</label>
+    <textarea name="closure_note" placeholder="e.g. Customer request, account settlement, member exit..."></textarea>
+
+    <label><i class="fa fa-lock" style="opacity:0.6;margin-right:4px;"></i> Admin Password</label>
+    <input type="password" name="admin_password" placeholder="Enter admin password to confirm" required autocomplete="off">
+
+    <button type="button" class="btn-close-account"
+      onclick="document.getElementById('confirmOverlay').classList.add('show')">
+      <i class="fa fa-lock"></i> Close This Account Permanently
+    </button>
+  </form>
+
+  <a href="/customers" class="btn-cancel">← Cancel, go back to customers</a>
+</div>
+
+</body>
+</html>
