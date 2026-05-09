@@ -1,15 +1,101 @@
 from flask import Flask, render_template, request, redirect, session, flash
 import sqlite3
-DB_PATH = r"C:\Users\MSQ-LAP\Desktop\project-BNK\bank.db"
+import os
+DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "bank.db")
 from datetime import datetime
 
 app = Flask(__name__)
-app.secret_key = "secret123"
+app.secret_key = os.environ.get("SECRET_KEY", "msqbank-default-secret")
 # ---------------- msq date and time update temporary) ----------------
 TEST_DATE = None  # e.g. datetime(2030, 5, 27) — set None for production
 
 def get_now():
     return TEST_DATE if TEST_DATE is not None else datetime.now()
+
+
+# ---------------- DB INIT (creates tables if not exist) ----------------
+def init_db():
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.executescript("""
+        CREATE TABLE IF NOT EXISTS users(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE,
+            password TEXT
+        );
+        CREATE TABLE IF NOT EXISTS customers(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            account_number TEXT UNIQUE,
+            name TEXT,
+            mobile TEXT UNIQUE,
+            address TEXT,
+            created TEXT,
+            is_closed INTEGER DEFAULT 0,
+            closed_date TEXT,
+            settlement_amount REAL DEFAULT 0,
+            closure_note TEXT
+        );
+        CREATE TABLE IF NOT EXISTS transactions(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            customer_id INTEGER,
+            type TEXT CHECK(type IN ('deposit','withdraw','service_charge')),
+            amount REAL,
+            date TEXT,
+            FOREIGN KEY(customer_id) REFERENCES customers(id)
+        );
+        CREATE TABLE IF NOT EXISTS loans(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            customer_id INTEGER,
+            loan_account_number TEXT UNIQUE,
+            loan_amount REAL,
+            interest REAL,
+            months INTEGER,
+            service_charge REAL,
+            created TEXT,
+            date TEXT,
+            tenure INTEGER,
+            guarantor1_id INTEGER,
+            guarantor2_id INTEGER,
+            FOREIGN KEY(customer_id) REFERENCES customers(id)
+        );
+        CREATE TABLE IF NOT EXISTS loan_payments(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            loan_id INTEGER,
+            amount REAL,
+            date TEXT,
+            FOREIGN KEY(loan_id) REFERENCES loans(id)
+        );
+        CREATE TABLE IF NOT EXISTS service_expense(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            amount REAL,
+            note TEXT,
+            description TEXT,
+            remark TEXT,
+            date TEXT
+        );
+        CREATE TABLE IF NOT EXISTS opening_service_charges(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            customer_id INTEGER,
+            amount REAL,
+            date TEXT
+        );
+        CREATE TABLE IF NOT EXISTS annual_service_charges(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            customer_id INTEGER,
+            amount REAL,
+            date TEXT,
+            year INTEGER
+        );
+        CREATE INDEX IF NOT EXISTS idx_customer_id ON transactions(customer_id);
+        CREATE INDEX IF NOT EXISTS idx_loan_customer ON loans(customer_id);
+    """)
+    # Default users (only insert if table is empty)
+    existing = c.execute("SELECT COUNT(*) FROM users").fetchone()[0]
+    if existing == 0:
+        c.execute("INSERT INTO users(username,password) VALUES('admin','admin123')")
+        c.execute("INSERT INTO users(username,password) VALUES('staff','staff123')")
+    conn.commit()
+    conn.close()
 
 # ---------------- DB MIGRATION (runs once on startup) ----------------
 def migrate_db():
@@ -81,6 +167,7 @@ def migrate_db():
     finally:
         conn3.close()
 
+init_db()
 migrate_db()
 
 # ---------------- DB CONNECTION ----------------
@@ -1918,4 +2005,5 @@ def close_account_confirm():
 
 # ---------------- RUN ----------------
 if __name__ == "__main__":
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=False)

@@ -1,3 +1,5 @@
+import os, sqlite3
+DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "bank.db")
 DB_PATH = r"C:\Users\MSQ-LAP\Desktop\project-BNK\bank.db"
 import sqlite3
 conn = sqlite3.connect(DB_PATH)
